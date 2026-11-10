@@ -15,7 +15,8 @@
     "format": "prettier --write .",
     "db:reset": "supabase db reset",
     "db:reset:remote": "supabase db reset --remote",
-    "make-admin": "node --env-file=.env.local scripts/make-admin.mjs"
+    "make-admin": "node --env-file=.env.local scripts/make-admin.mjs",
+    "richmenu": "node --no-warnings --experimental-strip-types --env-file=.env.local scripts/setup-richmenu.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "0.12.7",
