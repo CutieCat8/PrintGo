@@ -26,3 +26,24 @@ npm run dev                  # http://localhost:3000
 | `npm run build` | production build |
 
 Before opening a PR: `npm run lint && npm run typecheck && npm test`.
+
+## Database
+
+Schema and sample data live in `supabase/` (`migrations/` and `seed.sql`). The sample data is made up.
+
+| Command | What it does |
+|---|---|
+| `npm run db:reset` | empty the **local** Supabase database (needs Docker), run the migrations, then the seed |
+| `npm run db:reset:remote` | the same on the Supabase project linked with `npx supabase link`. **Erases that database**; the CLI asks you to confirm. Use a dev project only |
+
+Change the schema by adding a new file with `npx supabase migration new <name>`. Never edit a migration that others have already run.
+
+### Dev logins while the real sign-in is not built (task Z4)
+
+Outside production, send the header `x-dev-user` with an API request:
+
+| Header value | Acts as |
+|---|---|
+| `customer:00000000-0000-4000-8000-0000000000c1` | the sample customer |
+| `shop:00000000-0000-4000-8000-0000000000a1` | sample shop A (`...a2` = B, `...a3` = C) |
+| `admin` | an admin |
