@@ -1,0 +1,65 @@
+"use client";
+
+import { useSearchParams } from "next/navigation";
+import { useState } from "react";
+import { getBrowserClient } from "@/lib/db/browser";
+
+type State = "idle" | "sending" | "sent" | "failed";
+
+export function LoginForm() {
+  const [email, setEmail] = useState("");
+  const [state, setState] = useState<State>("idle");
+  // /auth/callback sends people back here with ?error=link when the link was used up or expired
+  const linkFailed = useSearchParams().get("error") === "link";
+
+  async function submit(event: React.FormEvent) {
+    event.preventDefault();
+    setState("sending");
+    const { error } = await getBrowserClient().auth.signInWithOtp({
+      email: email.trim(),
+      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+    });
+    setState(error ? "failed" : "sent");
+  }
+
+  if (state === "sent") {
+    return (
+      <p role="status">
+        ส่งลิงก์ไปที่ {email} แล้ว กรุณาเปิดอีเมลและกดลิงก์ในเบราว์เซอร์เดียวกับที่ใช้ขอลิงก์นี้
+      </p>
+    );
+  }
+
+  return (
+    <form onSubmit={submit} className="flex flex-col gap-3">
+      {linkFailed && (
+        <p role="alert" className="text-sm text-red-600">
+          ลิงก์หมดอายุหรือถูกใช้ไปแล้ว กรุณาขอลิงก์ใหม่
+        </p>
+      )}
+      <label className="flex flex-col gap-1 text-sm">
+        อีเมล
+        <input
+          type="email"
+          required
+          autoComplete="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          className="rounded border border-gray-300 px-3 py-2 text-base"
+        />
+      </label>
+      <button
+        type="submit"
+        disabled={state === "sending"}
+        className="rounded bg-black px-4 py-2 text-white disabled:opacity-50"
+      >
+        {state === "sending" ? "กำลังส่ง..." : "ส่งลิงก์เข้าสู่ระบบ"}
+      </button>
+      {state === "failed" && (
+        <p role="alert" className="text-sm text-red-600">
+          ส่งลิงก์ไม่สำเร็จ กรุณาตรวจอีเมลแล้วลองใหม่ (ถ้าขอบ่อยเกินไปอาจต้องรอสักครู่)
+        </p>
+      )}
+    </form>
+  );
+}
