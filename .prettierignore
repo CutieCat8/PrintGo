@@ -5,3 +5,4 @@ package-lock.json
 # Thai docs are written by hand; do not reflow them
 docs
 *.md
+supabase/.temp
