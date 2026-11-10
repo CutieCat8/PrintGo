@@ -55,7 +55,7 @@
 | `src/app/liff/**`, `src/app/shop/**` (ยกเว้น `shop/settings/**`), `src/app/dev/**`, `src/app/globals.css`, `src/app/not-found.tsx`, `src/app/error.tsx`, `src/components/ui/**`, `src/lib/client/**` | ยูริ |
 | `src/app/shop/settings/**`, `src/app/admin/**`, `src/app/api/payments/**`, `src/app/api/admin/**`, `src/lib/payment/**`, `src/components/payment/**` | อาร์ม |
 | `src/app/api/liff/**`, `src/app/api/shop/**`, `src/app/api/cron/**`, `src/lib/domain/**`, `docs/API.md` | พลุ |
-| `src/app/api/line/**`, `src/app/api/delivery/**`, `src/lib/line/**`, `src/lib/delivery/**`, `src/lib/auth/**`, `src/lib/db/**`, `src/lib/push/**`, `src/lib/errors.ts`, `src/middleware.ts`, `src/app/login/**`, `src/app/auth/**`, `public/**`, `scripts/**`, `supabase/**`, `.github/**`, `docs/**` (ยกเว้น `docs/API.md`), config ราก | ซี |
+| `src/app/api/line/**`, `src/app/api/delivery/**`, `src/lib/line/**`, `src/lib/delivery/**`, `src/lib/auth/**`, `src/lib/db/**`, `src/lib/push/**`, `src/lib/errors.ts`, `src/proxy.ts`, `src/app/login/**`, `src/app/auth/**`, `public/**`, `scripts/**`, `supabase/**`, `.github/**`, `docs/**` (ยกเว้น `docs/API.md`), config ราก | ซี |
 แก้นอกโฟลเดอร์ตัวเอง = เปิด PR และขอให้เจ้าของรีวิว/อนุมัติ
 
 ## 5. Git

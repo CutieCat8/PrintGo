@@ -38,9 +38,15 @@ Schema and sample data live in `supabase/` (`migrations/` and `seed.sql`). The s
 
 Change the schema by adding a new file with `npx supabase migration new <name>`. Never edit a migration that others have already run.
 
-### Dev logins while the real sign-in is not built (task Z4)
+### Signing in
 
-Outside production, send the header `x-dev-user` with an API request:
+- **Customers** sign in with LINE (LIFF); the browser sends the LIFF ID token as `Authorization: Bearer ...`.
+- **Shops and admins** sign in at `/login` with an e-mail link (Supabase Auth). A new shop fills in its details after the first sign-in and waits for an admin to approve it.
+- **Make someone an admin:** they sign in once at `/login`, then run `npm run make-admin -- their@email`.
+
+### Dev shortcut
+
+Outside production, send the header `x-dev-user` with an API request instead of signing in (it is ignored in production):
 
 | Header value | Acts as |
 |---|---|

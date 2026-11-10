@@ -1,7 +1,7 @@
 # งานของซี (วีรชิต) — Tech Lead + Fullstack
 
 อ่าน `CLAUDE.md`, `docs/CONTRACTS.md`, `DECISIONS.md` ก่อนทุก task · ถามก่อนทำตามโปรโตคอลใน `CLAUDE.md` ข้อ 1
-โฟลเดอร์ของซี (ตรงกับ `CLAUDE.md` ข้อ 4): `src/lib/db/**`, `src/lib/auth/**`, `src/lib/line/**`, `src/lib/delivery/**`, `src/lib/push/**`, `src/lib/errors.ts`, `src/middleware.ts`, `src/app/api/line/**`, `src/app/api/delivery/**`, `src/app/login/**`, `src/app/auth/**`, `public/**`, `scripts/**`, `supabase/**`, `.github/**`, `docs/**` (ยกเว้น `docs/API.md` ของพลุ), ไฟล์ config ราก
+โฟลเดอร์ของซี (ตรงกับ `CLAUDE.md` ข้อ 4): `src/lib/db/**`, `src/lib/auth/**`, `src/lib/line/**`, `src/lib/delivery/**`, `src/lib/push/**`, `src/lib/errors.ts`, `src/proxy.ts`, `src/app/api/line/**`, `src/app/api/delivery/**`, `src/app/login/**`, `src/app/auth/**`, `public/**`, `scripts/**`, `supabase/**`, `.github/**`, `docs/**` (ยกเว้น `docs/API.md` ของพลุ), ไฟล์ config ราก
 
 ---
 
@@ -74,7 +74,7 @@
 - `requireAdmin(req)`: ต้องมี `profiles.role='admin'`
 - หน้าเข้าสู่ระบบ magic link สำหรับร้าน/แอดมินที่ `/login` (UI เรียบง่าย ยูริปรับสไตล์ทีหลัง) + callback `/auth/callback` + `signOut`
 - สคริปต์ `npm run make-admin -- email@x.com` ใส่ role admin ให้ผู้ใช้ (ใช้ service role)
-- middleware (`src/middleware.ts`): ป้องกัน `/shop/**` และ `/admin/**` ให้ต้องล็อกอิน (ไม่ใช่ที่เดียวของการตรวจสิทธิ์ — API ต้องตรวจเองด้วย) · ล็อกอินแล้วแต่ยังไม่มี profile ร้าน → ส่งไป `/shop/onboarding` (ยกเว้นตัวหน้านั้นเอง; การเช็ก profile ใช้ `GET /api/shop/me` ฝั่งหน้าจอได้ ไม่จำเป็นต้องทำใน middleware ถ้าทำยาก) · หน้า `/login` ข้อความ "เข้าสู่ระบบ / สมัครร้านค้า" ใช้อีเมลช่องเดียว (D23)
+- proxy (`src/proxy.ts` — Next.js 16 เปลี่ยนชื่อจาก middleware): ป้องกัน `/shop/**` และ `/admin/**` ให้ต้องล็อกอิน (ไม่ใช่ที่เดียวของการตรวจสิทธิ์ — API ต้องตรวจเองด้วย) · ล็อกอินแล้วแต่ยังไม่มี profile ร้าน → ส่งไป `/shop/onboarding` (ยกเว้นตัวหน้านั้นเอง; การเช็ก profile ใช้ `GET /api/shop/me` ฝั่งหน้าจอได้ ไม่จำเป็นต้องทำใน middleware ถ้าทำยาก) · หน้า `/login` ข้อความ "เข้าสู่ระบบ / สมัครร้านค้า" ใช้อีเมลช่องเดียว (D23)
 - เปิดทางให้ dev: ถ้า `NODE_ENV!=='production'` และมี header `x-dev-user` ยังใช้ stub ได้ **แต่ต้องปิดเด็ดขาดใน production** (test ยืนยัน)
 - test: token ปลอม → 401, ร้านเรียก API แอดมิน → 403, ร้าน `pending` เรียก API ออเดอร์ → 403 แต่เรียก `profile` ได้ (`allowPending`), ผู้ใช้ไม่มี profile เรียก `requireShop` → 403 แต่ `requireAuthUser` ผ่าน, `x-dev-user` ถูกปิดเมื่อ `NODE_ENV=production`
 **เกณฑ์ผ่าน:** [ ] ล็อกอินร้านด้วย magic link ได้จริง [ ] verify LIFF token ได้จริงกับ LINE channel จริง (หรือรายงานตรง ๆ ว่ายังทดสอบกับของจริงไม่ได้) [ ] ทั้ง 3 ฟังก์ชันมี test [ ] production ปิด stub
@@ -89,7 +89,7 @@
 - (ด้วยมือบน LINE Developers) สร้าง Provider, Messaging API channel, LINE Login channel + LIFF app ชี้ `NEXT_PUBLIC_APP_URL/liff` (ขนาด Full), ใส่ค่าใน env
 - `POST /api/line/webhook`: ตรวจ `x-line-signature` ด้วย `LINE_CHANNEL_SECRET` (HMAC-SHA256 ของ raw body, **อ่าน body แบบ raw ก่อน parse**) · ผิด → 401 · บันทึก `webhook_events` กันซ้ำ (event id จาก `webhookEventId`) · ตอบ 200 เร็ว
 - จัดการ event: `follow` (ข้อความต้อนรับ + ปุ่มเปิดฟอร์ม), `message` ข้อความ (ตอบเมนูช่วยเหลือสั้น ๆ), `postback` (`action=view_order&id=…` ส่งลิงก์ LIFF ไปหน้าออเดอร์)
-- Rich Menu: 3 ปุ่มตาม wireframe: "สั่งปริ้น" (เปิด LIFF `/liff/new`), "สถานะงาน" (เปิด `/liff/orders`) และ "คุยกับร้าน" (เปิด `/liff/chats`) · Rich Menu เป็นรูปนิ่ง ใส่ badge ไม่ได้ (badge อยู่ในหน้า LIFF ตาม D16) · เขียนสคริปต์ `scripts/setup-richmenu.ts` ที่สร้างและตั้งเป็นค่าเริ่มต้น (รูปเมนู: ใช้รูปพื้นเรียบสีแบรนด์ + ตัวอักษร สร้างด้วย canvas/ภาพ static ได้)
+- Rich Menu: 3 ปุ่มตาม wireframe: "สั่งปริ้น" (เปิด LIFF `/liff/new`), "สถานะงาน" (เปิด `/liff/orders`) และ "คุยกับร้าน" (เปิด `/liff/chats`) · Rich Menu เป็นรูปนิ่ง ใส่ badge ไม่ได้ (badge อยู่ในหน้า LIFF ตาม D16) · เขียนสคริปต์ `scripts/setup-richmenu.mjs` (เป็น `.mjs` ตามแบบ `make-admin` เพื่อไม่ต้องเพิ่มตัวรัน TypeScript) ที่สร้างและตั้งเป็นค่าเริ่มต้น (รูปเมนู: ใช้รูปพื้นเรียบสีแบรนด์ + ตัวอักษร สร้างด้วย canvas/ภาพ static ได้)
 - util `src/lib/line/client.ts`: ส่ง reply/push ผ่าน Messaging API (ห่อ fetch, ไม่ log token)
 **เกณฑ์ผ่าน:** [ ] ลายเซ็นผิด → 401 (test) · [ ] event ซ้ำไม่ประมวลผลซ้ำ (test) · [ ] ทักบัญชี OA จริงบนมือถือแล้วเมนูขึ้นและเปิดหน้า LIFF ได้ (ซีทดสอบเอง บอกผลจริง) · [ ] ไม่มี token ใน log
 **ห้าม:** ส่ง push เกินจำเป็น (โควตา/ค่าใช้จ่ายข้อความ; ใช้ reply เมื่อทำได้) · ฝัง secret ใน client
