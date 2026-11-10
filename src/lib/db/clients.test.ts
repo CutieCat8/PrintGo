@@ -1,8 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-// `server-only` throws outside the Next.js server build, so tests replace it with an empty module.
-vi.mock("server-only", () => ({}));
-
 afterEach(() => {
   vi.unstubAllEnvs();
   vi.resetModules();
