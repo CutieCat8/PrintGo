@@ -323,6 +323,13 @@ revoke all on all sequences in schema public from anon, authenticated;
 alter default privileges in schema public revoke all on tables from anon, authenticated;
 alter default privileges in schema public revoke all on sequences from anon, authenticated;
 
+-- The server (service role) is the only user of these tables. Grant it explicitly instead of
+-- relying on the project's "Automatically expose new tables" Data API setting, which may be off.
+grant select, insert, update, delete on all tables in schema public to service_role;
+grant usage, select on all sequences in schema public to service_role;
+alter default privileges in schema public grant select, insert, update, delete on tables to service_role;
+alter default privileges in schema public grant usage, select on sequences to service_role;
+
 -- ============================== storage ==============================
 -- All buckets are private. Customers upload with signed upload URLs, shops read with short-lived
 -- signed URLs; no storage policy is needed because the server (service role) creates them.
