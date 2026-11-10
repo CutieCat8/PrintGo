@@ -5,20 +5,20 @@ import { ZodError } from "zod";
  * The status lives here once, so a route cannot answer a code with the wrong status.
  */
 type StatusByCode = {
-  UNAUTHENTICATED: 401,
-  FORBIDDEN: 403,
-  NOT_FOUND: 404,
-  VALIDATION_ERROR: 422,
-  ORDER_INVALID_TRANSITION: 409,
-  SHOP_CLOSED: 409,
-  SHOP_PAUSED: 409,
-  MANUAL_PRICE_REQUIRED: 409,
-  PAYMENT_DUPLICATE_SLIP: 409,
-  PAYMENT_AMOUNT_MISMATCH: 409,
-  CHAT_CLOSED: 409,
-  ALREADY_REGISTERED: 409,
-  RATE_LIMITED: 429,
-  INTERNAL: 500,
+  UNAUTHENTICATED: 401;
+  FORBIDDEN: 403;
+  NOT_FOUND: 404;
+  VALIDATION_ERROR: 422;
+  ORDER_INVALID_TRANSITION: 409;
+  SHOP_CLOSED: 409;
+  SHOP_PAUSED: 409;
+  MANUAL_PRICE_REQUIRED: 409;
+  PAYMENT_DUPLICATE_SLIP: 409;
+  PAYMENT_AMOUNT_MISMATCH: 409;
+  CHAT_CLOSED: 409;
+  ALREADY_REGISTERED: 409;
+  RATE_LIMITED: 429;
+  INTERNAL: 500;
 };
 
 export type ErrorCode = keyof StatusByCode;
@@ -72,7 +72,10 @@ export class ApiError<C extends ErrorCode = ErrorCode> extends Error {
 function toApiError(err: unknown): ApiError {
   if (err instanceof ApiError) return err;
   if (err instanceof ZodError) {
-    const issues = err.issues.map((i) => ({ path: i.path.map(String).join("."), message: i.message }));
+    const issues = err.issues.map((i) => ({
+      path: i.path.map(String).join("."),
+      message: i.message,
+    }));
     return new ApiError("VALIDATION_ERROR", 422, undefined, { issues });
   }
   // Unknown failure: log the real cause on the server, tell the client nothing about it.
