@@ -50,10 +50,10 @@ describe("PaymentProvider", () => {
     ).rejects.toMatchObject({ code: "VALIDATION_ERROR", status: 422 });
   });
 
-  it("never verifies a slip before A2 is implemented, even when a key is present", async () => {
+  it("requires server-side order/receiver context even when a key is present", async () => {
     vi.stubEnv("SLIPOK_API_KEY", "fictional-test-key");
     const result = await getPaymentProvider().verifySlip({
-      slipBytes: new Uint8Array([0]),
+      slipBytes: new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]),
       expectedAmountSatang: 1,
     });
     expect(result.result).toBe("review");
