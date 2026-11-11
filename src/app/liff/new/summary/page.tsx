@@ -19,6 +19,7 @@ import {
   Textarea,
   buttonClasses,
   useToast,
+  Steps,
 } from "@/components/ui";
 import { api, errorMessage, isApiClientError } from "@/lib/client/api";
 import {
@@ -35,6 +36,8 @@ import { useShops } from "@/lib/client/hooks";
 import { describeOrderProblem, type OrderProblem } from "@/lib/client/orders";
 import { positionOf, requestLocation, useLocation } from "@/lib/client/location";
 import type { EstimateResult, ShopListItem } from "@/lib/client/types";
+import { EXTRA_LABEL, shopExtras, wantedExtras } from "@/lib/client/extras";
+import { ORDER_STEPS } from "../../_components/steps";
 
 export default function SummaryPage() {
   const router = useRouter();
@@ -166,6 +169,7 @@ export default function SummaryPage() {
       }
     >
       <div className="flex flex-col gap-4">
+        <Steps steps={ORDER_STEPS} current={2} />
         <Card>
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
@@ -300,7 +304,8 @@ export default function SummaryPage() {
 }
 
 function ServicesCard({ shop, draft }: { shop: ShopListItem; draft: OrderDraft }) {
-  if (shop.services.length === 0) return null;
+  const missing = shopExtras(shop.services, wantedExtras(draft.files)).missing;
+  if (shop.services.length === 0 && missing.length === 0) return null;
   const manyFiles = draft.files.length > 1;
 
   function toggle(serviceId: string, on: boolean) {
@@ -330,7 +335,16 @@ function ServicesCard({ shop, draft }: { shop: ShopListItem; draft: OrderDraft }
 
   return (
     <Card>
-      <h2 className="font-semibold text-brand">บริการเสริมของร้านนี้</h2>
+      <h2 className="font-semibold text-brand">งานเพิ่มเติม (บริการของร้านนี้)</h2>
+      {missing.length > 0 && (
+        <p className="mt-2 rounded-control bg-warning-50 px-3 py-2 text-sm text-warning-ink">
+          ร้านนี้ไม่มี {missing.map((k) => EXTRA_LABEL[k]).join(", ")} ที่คุณเลือกไว้ เลือกร้านอื่น
+          หรือพิมพ์ถามร้านในหมายเหตุได้
+        </p>
+      )}
+      {draft.services.length > 0 && (
+        <p className="mt-1 text-xs text-ink-muted">เลือกไว้ให้ตามงานเพิ่มเติมที่คุณขอ แก้ได้</p>
+      )}
       <div className="mt-2 flex flex-col gap-3">
         {shop.services.map((s) => {
           const chosen = draft.services.find((x) => x.serviceId === s.id);

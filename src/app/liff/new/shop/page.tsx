@@ -11,13 +11,22 @@ import {
   Money,
   PageShell,
   SkeletonCard,
+  Steps,
   cx,
 } from "@/components/ui";
 import { errorMessage } from "@/lib/client/api";
 import { filesReady, updateDraft, useDraft } from "@/lib/client/draft";
+import {
+  EXTRA_LABEL,
+  servicesForExtras,
+  shopExtras,
+  wantedExtras,
+  type ExtraKey,
+} from "@/lib/client/extras";
 import { useShops } from "@/lib/client/hooks";
 import { positionOf, requestLocation, skipLocation, useLocation } from "@/lib/client/location";
 import type { ShopListItem } from "@/lib/client/types";
+import { ORDER_STEPS } from "../../_components/steps";
 
 export default function PickShopPage() {
   const router = useRouter();
@@ -26,6 +35,7 @@ export default function PickShopPage() {
   const pos = positionOf(location);
   const asked = location.kind !== "idle" && location.kind !== "asking";
   const shops = useShops(asked ? pos : null);
+  const wanted = wantedExtras(draft.files);
 
   // Came here without files (e.g. reopened the link): back to the form
   useEffect(() => {
@@ -36,8 +46,9 @@ export default function PickShopPage() {
     updateDraft((d) => ({
       ...d,
       shopId: shop.id,
-      // Services belong to one shop: a new shop starts with none selected
-      services: d.shopId === shop.id ? d.services : [],
+      // Services belong to one shop: a new shop starts with the ones matching the files' wishes
+      // (ปกใส, เข้าเล่ม ...), which the customer can still change on the summary page
+      services: d.shopId === shop.id ? d.services : servicesForExtras(shop.services, d.files),
       fulfillment: shop.acceptsDelivery && pos ? d.fulfillment : "pickup",
     }));
     router.push("/liff/new/summary");
@@ -46,6 +57,13 @@ export default function PickShopPage() {
   return (
     <PageShell title="เลือกร้าน" backHref="/liff/new">
       <div className="flex flex-col gap-3">
+        <Steps steps={ORDER_STEPS} current={1} className="mb-1" />
+        {wanted.length > 0 && (
+          <p className="rounded-control bg-brand-50 px-3 py-2 text-sm text-brand">
+            งานเพิ่มเติมที่คุณเลือก: <b>{wanted.map((k) => EXTRA_LABEL[k]).join(", ")}</b> ·
+            ร้านที่มีครบจะมีเครื่องหมาย ✓
+          </p>
+        )}
         <LocationCard />
 
         {!asked ? null : shops.isLoading ? (
@@ -68,6 +86,7 @@ export default function PickShopPage() {
                 key={shop.id}
                 shop={shop}
                 selected={draft.shopId === shop.id}
+                wanted={wanted}
                 onChoose={() => choose(shop)}
               />
             ))}
@@ -137,13 +156,16 @@ function openText(shop: ShopListItem): string {
 function ShopCard({
   shop,
   selected,
+  wanted,
   onChoose,
 }: {
   shop: ShopListItem;
   selected: boolean;
+  wanted: ExtraKey[];
   onChoose: () => void;
 }) {
   const available = shop.isOpen && !shop.isPaused;
+  const extras = shopExtras(shop.services, wanted);
   const chips = shop.services.slice(0, 4);
   const more = shop.services.length - chips.length;
 
@@ -160,8 +182,14 @@ function ShopCard({
           selected && "ring-2 ring-accent-ink",
         )}
       >
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
+        <div className="flex items-start gap-3">
+          <span
+            aria-hidden="true"
+            className="flex size-11 shrink-0 items-center justify-center rounded-control bg-brand-50 text-xl"
+          >
+            🏪
+          </span>
+          <div className="min-w-0 flex-1">
             <p className="font-semibold text-brand">{shop.name}</p>
             <p className="truncate text-sm text-ink-muted">{shop.address}</p>
           </div>
@@ -181,6 +209,21 @@ function ShopCard({
             /หน้า
           </span>
         </div>
+        {wanted.length > 0 && (
+          <p className="mt-2 text-sm">
+            {extras.has.length > 0 && (
+              <span className="font-medium text-success-ink">
+                ✓ มี{extras.has.map((k) => EXTRA_LABEL[k]).join(", ")}
+              </span>
+            )}
+            {extras.has.length > 0 && extras.missing.length > 0 && " · "}
+            {extras.missing.length > 0 && (
+              <span className="text-ink-muted">
+                ✕ ไม่มี{extras.missing.map((k) => EXTRA_LABEL[k]).join(", ")}
+              </span>
+            )}
+          </p>
+        )}
         {chips.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-1">
             {chips.map((s) => (

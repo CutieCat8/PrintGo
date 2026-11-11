@@ -68,8 +68,28 @@ export default function ShopQueuePage() {
     );
   }
 
+  const count = (statuses: OrderStatus[]) => list.filter((o) => statuses.includes(o.status)).length;
+  const stats = [
+    { label: "รอยืนยัน", value: count(["submitted"]), tone: "text-accent-ink" },
+    { label: "ต้องปริ้น", value: count(["paid", "printing"]), tone: "text-brand" },
+    {
+      label: "รอส่งมอบ",
+      value: count(["ready", "courier_requested", "in_transit"]),
+      tone: "text-brand",
+    },
+    { label: "เสร็จแล้ว", value: count(["completed"]), tone: "text-success-ink" },
+  ];
+
   return (
     <div className="flex flex-col gap-6">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {stats.map((s) => (
+          <div key={s.label} className="rounded-card bg-surface p-4 shadow-card ring-1 ring-line">
+            <p className="text-sm text-ink-muted">{s.label}</p>
+            <p className={cx("text-3xl font-bold tabular-nums", s.tone)}>{s.value}</p>
+          </div>
+        ))}
+      </div>
       {GROUPS.map((g) => {
         let items = list.filter((o) => g.statuses.includes(o.status));
         if (g.byEta) {
