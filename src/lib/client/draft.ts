@@ -3,6 +3,7 @@
 import { useSyncExternalStore } from "react";
 import type { ColorMode, Fulfillment, Paper, Sides } from "@/lib/db/types";
 import type { CreateOrderRequest, EstimateRequest, SelectedService } from "./types";
+import type { ExtraKey } from "./extras";
 
 /**
  * The order the customer is putting together across /liff/new -> /shop -> /summary.
@@ -30,6 +31,8 @@ export type DraftFile = {
   paper: Paper;
   sides: Sides;
   copies: number;
+  /** Finishing the customer would like for this file (matched to the chosen shop's services). */
+  extras: ExtraKey[];
 };
 
 export type DeliveryInfo = { name: string; phone: string; address: string };
@@ -67,7 +70,7 @@ function load() {
       // A file whose upload had not finished cannot be retried: its contents are gone. Drop it.
       saved.files = saved.files
         .filter((f) => f.upload === "done" && f.path !== null)
-        .map((f) => ({ ...f, counting: false }));
+        .map((f) => ({ ...f, counting: false, extras: f.extras ?? [] }));
       state = { ...EMPTY, ...saved };
     }
   } catch {
