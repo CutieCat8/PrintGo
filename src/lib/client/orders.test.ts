@@ -9,7 +9,7 @@ import {
   isThaiPhone,
   nextBangkokDate,
 } from "./format";
-import { customerCanCancel, customerMoney, orderSteps } from "./orders";
+import { customerCanCancel, customerMoney, describeOrderProblem, orderSteps } from "./orders";
 import { toCreateOrderRequest, filesReady, type DraftFile, type OrderDraft } from "./draft";
 
 const baseMoney = {
@@ -223,5 +223,50 @@ describe("order draft", () => {
     const pickup = toCreateOrderRequest(draft(), "s", { lat: 1, lng: 2 });
     expect(pickup).not.toHaveProperty("deliveryLat");
     expect(pickup).not.toHaveProperty("deliveryRecipientName");
+  });
+});
+
+describe("describeOrderProblem", () => {
+  const names = ["report.pdf", "poster.png"];
+
+  it("names the file a shop cannot print and suggests another shop", () => {
+    const p = describeOrderProblem(
+      {
+        code: "VALIDATION_ERROR",
+        message: "ร้านนี้ไม่รับงานชุดค่านี้",
+        details: { fileIndex: 1, color: "color", paper: "A3", sides: "double" },
+      },
+      names,
+    );
+    expect(p.pickAnotherShop).toBe(true);
+    expect(p.fileIndex).toBe(1);
+    expect(p.message).toContain("poster.png");
+    expect(p.message).toContain("สี A3 สองด้าน");
+  });
+
+  it("closed or paused shop -> pick another shop", () => {
+    for (const code of ["SHOP_CLOSED", "SHOP_PAUSED"]) {
+      expect(describeOrderProblem({ code, message: "x", details: {} }, names).pickAnotherShop).toBe(
+        true,
+      );
+    }
+  });
+
+  it("other file problems keep the API message and add the file name", () => {
+    const p = describeOrderProblem(
+      { code: "VALIDATION_ERROR", message: "จำนวนหน้าไม่ถูกต้อง", details: { fileIndex: 0 } },
+      names,
+    );
+    expect(p).toEqual({
+      message: 'จำนวนหน้าไม่ถูกต้อง (ไฟล์ "report.pdf")',
+      pickAnotherShop: false,
+      fileIndex: 0,
+    });
+  });
+
+  it("anything else passes the message through", () => {
+    expect(
+      describeOrderProblem({ code: "INTERNAL", message: "ระบบขัดข้อง", details: {} }, names),
+    ).toEqual({ message: "ระบบขัดข้อง", pickAnotherShop: false, fileIndex: null });
   });
 });

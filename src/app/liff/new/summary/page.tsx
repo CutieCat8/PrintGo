@@ -32,6 +32,7 @@ import {
 } from "@/lib/client/draft";
 import { UNIT_LABEL, fileSettingsText, isThaiPhone } from "@/lib/client/format";
 import { useShops } from "@/lib/client/hooks";
+import { describeOrderProblem, type OrderProblem } from "@/lib/client/orders";
 import { positionOf, requestLocation, useLocation } from "@/lib/client/location";
 import type { EstimateResult, ShopListItem } from "@/lib/client/types";
 
@@ -95,8 +96,20 @@ export default function SummaryPage() {
         router.replace("/liff/new/shop");
         return;
       }
-      toast(errorMessage(e), "error");
+      toast(problemOf(e).message, "error");
     }
+  }
+
+  const fileNames = draft.files.map((f) => f.name);
+  function problemOf(e: unknown): OrderProblem {
+    return isApiClientError(e)
+      ? describeOrderProblem(e, fileNames)
+      : { message: errorMessage(e), pickAnotherShop: false, fileIndex: null };
+  }
+
+  function pickAnotherShop() {
+    updateDraft((d) => ({ ...d, shopId: null, services: [] }));
+    router.push("/liff/new/shop");
   }
 
   if (!hydrated || !asked || shops.isLoading) {
@@ -272,9 +285,10 @@ export default function SummaryPage() {
 
         <EstimateCard
           loading={estimate.isLoading}
-          error={estimate.error}
+          problem={estimate.error ? problemOf(estimate.error) : null}
           data={estimate.data}
           onRetry={() => estimate.mutate()}
+          onPickAnotherShop={pickAnotherShop}
         />
       </div>
     </PageShell>
@@ -376,19 +390,38 @@ function Line({
 
 function EstimateCard({
   loading,
-  error,
+  problem,
   data,
   onRetry,
+  onPickAnotherShop,
 }: {
   loading: boolean;
-  error: unknown;
+  problem: OrderProblem | null;
   data: EstimateResult | undefined;
   onRetry: () => void;
+  onPickAnotherShop: () => void;
 }) {
   if (loading && !data) return <Skeleton className="h-32" />;
-  if (error && !data) {
+  if (problem && problem.pickAnotherShop) {
+    // e.g. "ร้านนี้ไม่รับงานแบบ สี A3 สองด้าน (ไฟล์ ...)": retrying will not help
     return (
-      <ErrorState title="คำนวณราคาไม่สำเร็จ" description={errorMessage(error)} onRetry={onRetry} />
+      <Card className="bg-warning-50" role="alert">
+        <p className="font-semibold text-warning-ink">ร้านนี้รับออเดอร์นี้ไม่ได้</p>
+        <p className="mt-1 text-sm text-warning-ink">{problem.message}</p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <Button size="sm" onClick={onPickAnotherShop}>
+            เลือกร้านอื่น
+          </Button>
+          <Link href="/liff/new" className={buttonClasses({ variant: "secondary", size: "sm" })}>
+            แก้ไขไฟล์
+          </Link>
+        </div>
+      </Card>
+    );
+  }
+  if (problem && !data) {
+    return (
+      <ErrorState title="คำนวณราคาไม่สำเร็จ" description={problem.message} onRetry={onRetry} />
     );
   }
   if (!data) return null;

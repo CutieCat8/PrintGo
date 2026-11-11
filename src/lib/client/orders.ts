@@ -121,3 +121,47 @@ export function customerMoney(
 export function customerCanCancel(status: OrderStatus): boolean {
   return status === "submitted" || status === "awaiting_payment";
 }
+
+export type OrderProblem = {
+  message: string;
+  /** The customer should pick another shop (closed, paused, or this shop cannot print a file). */
+  pickAnotherShop: boolean;
+  /** Index of the file the problem is about, when the API says so. */
+  fileIndex: number | null;
+};
+
+const COLOR_TEXT: Record<string, string> = { bw: "ขาวดำ", color: "สี" };
+const SIDES_TEXT: Record<string, string> = { single: "ด้านเดียว", double: "สองด้าน" };
+
+/**
+ * Thai explanation of an /estimate or /orders failure, naming the file when the API gives
+ * `details.fileIndex` (pricing/estimate.ts: "ร้านนี้ไม่รับงานชุดค่านี้" + color/paper/sides).
+ */
+export function describeOrderProblem(
+  err: { code: string; message: string; details: Record<string, unknown> },
+  fileNames: string[],
+): OrderProblem {
+  if (err.code === "SHOP_CLOSED" || err.code === "SHOP_PAUSED") {
+    return { message: err.message, pickAnotherShop: true, fileIndex: null };
+  }
+  const d = err.details;
+  const fileIndex =
+    typeof d.fileIndex === "number" && Number.isInteger(d.fileIndex) ? d.fileIndex : null;
+  if (err.code !== "VALIDATION_ERROR" || fileIndex === null) {
+    return { message: err.message, pickAnotherShop: false, fileIndex: null };
+  }
+
+  const name = fileNames[fileIndex] ?? `ไฟล์ที่ ${fileIndex + 1}`;
+  const unsupported = typeof d.color === "string" && typeof d.paper === "string";
+  if (unsupported) {
+    const setting = [COLOR_TEXT[d.color as string], d.paper, SIDES_TEXT[d.sides as string]]
+      .filter(Boolean)
+      .join(" ");
+    return {
+      message: `ร้านนี้ไม่รับงานแบบ ${setting} (ไฟล์ "${name}") กรุณาเลือกร้านอื่น หรือเปลี่ยนการตั้งค่าไฟล์นี้`,
+      pickAnotherShop: true,
+      fileIndex,
+    };
+  }
+  return { message: `${err.message} (ไฟล์ "${name}")`, pickAnotherShop: false, fileIndex };
+}
