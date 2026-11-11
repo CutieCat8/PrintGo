@@ -257,7 +257,9 @@ export async function transition(args: TransitionArgs): Promise<OrderRow> {
   }
   const updated = parseRow(OrderRow, data);
 
-  // Side effects are idempotent (insert once), so a retry cannot double them.
+  // Side effects insert at most once, so a repeated call cannot double them. They are NOT atomic with the
+  // status change: if one fails the status stays changed and a retry gets 409, so the missing row is not
+  // recreated (needs a database function / a repair job; see docs/API.md section 6).
   try {
     for (const effect of rule.effects) {
       if (effect === "on_paid") await createSettlement(db, updated);
