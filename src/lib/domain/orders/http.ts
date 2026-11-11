@@ -18,3 +18,6 @@ export async function orderIdFrom(ctx: { params: Promise<{ id: string }> }): Pro
 }
 
 export type OrderRouteContext = { params: Promise<{ id: string }> };
+
+/** The same check for any route whose only param is `:id`. */
+export const idFrom = orderIdFrom;

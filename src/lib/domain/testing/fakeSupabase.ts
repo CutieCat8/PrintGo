@@ -9,6 +9,22 @@ export type Row = Record<string, unknown>;
 export type StoredObject = { size: number; contentType: string; createdAt: string };
 type Result = { data: unknown; error: unknown };
 
+// Unique constraints of the real tables that tests rely on (insert fails with Postgres code 23505).
+// Rows inside one insert are not compared with each other.
+const UNIQUES: Record<string, string[][]> = {
+  profiles: [["auth_user_id"]],
+  shop_hours: [["shop_id", "weekday"]],
+  shop_pricing_rules: [["shop_id", "color", "paper", "sides"]],
+  shop_discount_tiers: [["shop_id", "min_pages"]],
+  webhook_events: [["id"]],
+};
+
+// Column defaults of the real tables that code under test relies on.
+const VALUE_DEFAULTS: Record<string, Row> = {
+  shops: { is_paused: false, cutoff_minutes: 30 },
+  shop_services: { is_active: true, sort_order: 0 },
+};
+
 // Columns that default to null in the real tables (so rows read back like real ones).
 const NULLABLE_DEFAULTS: Record<string, string[]> = {
   orders: [
@@ -195,6 +211,7 @@ class Query implements PromiseLike<Result> {
     const out: Row = { ...row };
     out.id ??= fakeUuid();
     out.created_at ??= new Date().toISOString();
+    for (const [col, value] of Object.entries(VALUE_DEFAULTS[this.table] ?? {})) out[col] ??= value;
     for (const col of NULLABLE_DEFAULTS[this.table] ?? []) out[col] ??= null;
     if (this.table === "orders") {
       out.status ??= "submitted";
@@ -237,14 +254,30 @@ class Query implements PromiseLike<Result> {
         const inserted = ([] as Row[])
           .concat(this.payload as Row | Row[])
           .map((r) => this.defaults(r));
+        for (const row of inserted) {
+          for (const cols of UNIQUES[this.table] ?? []) {
+            if (rows.some((x) => cols.every((c) => x[c] === row[c]))) {
+              return { data: null, error: { code: "23505", message: "duplicate key value" } };
+            }
+          }
+        }
         rows.push(...inserted);
         return this.returning ? this.shape(inserted) : { data: null, error: null };
       }
       case "upsert": {
-        const key = this.upsertOpts.onConflict as string;
+        // `onConflict` may name several columns ("shop_id,weekday"). On a conflict the row is
+        // skipped (ignoreDuplicates) or updated in place, like Postgres ON CONFLICT.
+        const keys = (this.upsertOpts.onConflict as string).split(",").map((k) => k.trim());
         const inserted: Row[] = [];
         for (const r of ([] as Row[]).concat(this.payload as Row | Row[])) {
-          if (rows.some((x) => x[key] === r[key])) continue; // ignoreDuplicates
+          const existing = rows.find((x) => keys.every((k) => x[k] === r[k]));
+          if (existing) {
+            if (!this.upsertOpts.ignoreDuplicates) {
+              Object.assign(existing, r);
+              inserted.push(existing);
+            }
+            continue;
+          }
           const row = this.defaults(r);
           rows.push(row);
           inserted.push(row);
