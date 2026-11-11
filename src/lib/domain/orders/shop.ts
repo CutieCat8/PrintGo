@@ -11,6 +11,7 @@ import {
 } from "@/lib/db/types";
 import { ApiError } from "@/lib/errors";
 import { notify } from "@/lib/line/notify";
+import { unreadCount, unreadCounts } from "@/lib/domain/chat/unread";
 import { loadDetailParts } from "./detail";
 import { expireIfDue } from "./expire";
 import { checkPickupCode, normalizePickupCode } from "./pickupAttempts";
@@ -67,7 +68,11 @@ async function shopName(db: SupabaseClient, shopId: string): Promise<string> {
 }
 
 async function present(db: SupabaseClient, row: OrderRow): Promise<OrderView> {
-  return presentOrder(row, { shopName: await shopName(db, row.shopId), viewer: "shop" });
+  return presentOrder(row, {
+    shopName: await shopName(db, row.shopId),
+    viewer: "shop",
+    unreadMessageCount: await unreadCount(db, row.id, "shop"),
+  });
 }
 
 /** GET /api/shop/orders?status=a,b: my orders, jobs waiting for an answer first, then newest first. */
@@ -99,7 +104,15 @@ export async function listShopOrders(
   const others = rows.filter((r) => r.status !== "submitted");
 
   const name = await shopName(db, shopId);
-  return [...waiting, ...others].map((r) => presentOrder(r, { shopName: name, viewer: "shop" }));
+  const ordered = [...waiting, ...others];
+  const unread = await unreadCounts(
+    db,
+    ordered.map((r) => r.id),
+    "shop",
+  );
+  return ordered.map((r) =>
+    presentOrder(r, { shopName: name, viewer: "shop", unreadMessageCount: unread.get(r.id) ?? 0 }),
+  );
 }
 
 /** GET /api/shop/orders/:id: OrderDetail without the pickup code and the recipient's name/phone. */
@@ -109,7 +122,9 @@ export async function getShopOrderDetail(
 ): Promise<ShopOrderDetailView> {
   const db = getServiceClient();
   const row = await loadForAction(db, shopId, orderId);
-  return presentShopOrderDetail(row, await loadDetailParts(db, row));
+  return presentShopOrderDetail(row, await loadDetailParts(db, row), {
+    unreadMessageCount: await unreadCount(db, row.id, "shop"),
+  });
 }
 
 /**

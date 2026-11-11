@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { getServiceClient } from "@/lib/db/server";
 import { OrderRow, parseRow, ShopRow } from "@/lib/db/types";
 import { ApiError } from "@/lib/errors";
+import { unreadCount, unreadCounts } from "@/lib/domain/chat/unread";
 import { loadDetailParts } from "./detail";
 import { expireIfDue } from "./expire";
 import { transition } from "./transition";
@@ -55,8 +56,17 @@ export async function listCustomerOrders(customerId: string): Promise<OrderView[
     if (shops.error) throw shops.error;
     for (const s of shops.data ?? []) names.set(s.id as string, s.name as string);
   }
+  const unread = await unreadCounts(
+    db,
+    rows.map((r) => r.id),
+    "customer",
+  );
   return rows.map((r) =>
-    presentOrder(r, { shopName: names.get(r.shopId) ?? "", viewer: "customer" }),
+    presentOrder(r, {
+      shopName: names.get(r.shopId) ?? "",
+      viewer: "customer",
+      unreadMessageCount: unread.get(r.id) ?? 0,
+    }),
   );
 }
 
@@ -68,7 +78,9 @@ export async function getCustomerOrderDetail(
   const db = getServiceClient();
   const row = await expireIfDue(await readOwnOrder(db, customerId, orderId));
   const parts = await loadDetailParts(db, row);
-  return presentCustomerOrderDetail(row, parts);
+  return presentCustomerOrderDetail(row, parts, {
+    unreadMessageCount: await unreadCount(db, row.id, "customer"),
+  });
 }
 
 /**
@@ -85,5 +97,9 @@ export async function cancelCustomerOrder(customerId: string, orderId: string): 
     actor: "customer",
   });
   const shop = await readShop(db, updated.shopId);
-  return presentOrder(updated, { shopName: shop.name, viewer: "customer" });
+  return presentOrder(updated, {
+    shopName: shop.name,
+    viewer: "customer",
+    unreadMessageCount: await unreadCount(db, updated.id, "customer"),
+  });
 }

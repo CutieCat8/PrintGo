@@ -17,6 +17,7 @@ const UNIQUES: Record<string, string[][]> = {
   shop_pricing_rules: [["shop_id", "color", "paper", "sides"]],
   shop_discount_tiers: [["shop_id", "min_pages"]],
   webhook_events: [["id"]],
+  push_subscriptions: [["endpoint"]],
 };
 
 // Column defaults of the real tables that code under test relies on.
@@ -49,6 +50,8 @@ const NULLABLE_DEFAULTS: Record<string, string[]> = {
     "completed_at",
   ],
   order_files: ["deleted_at"],
+  messages: ["read_at", "push_sent_at"],
+  push_subscriptions: ["user_agent", "last_success_at"],
 };
 
 let idCounter = 0;
