@@ -77,7 +77,7 @@ export default function ShopQueuePage() {
       value: count(["ready", "courier_requested", "in_transit"]),
       tone: "text-brand",
     },
-    { label: "เสร็จแล้ว", value: count(["completed"]), tone: "text-success-ink" },
+    { label: "เสร็จแล้ว (ทั้งหมด)", value: count(["completed"]), tone: "text-success-ink" },
   ];
 
   return (

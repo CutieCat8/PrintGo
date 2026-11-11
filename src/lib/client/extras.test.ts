@@ -55,3 +55,16 @@ describe("extras", () => {
     expect(servicesForExtras(services, [{ extras: ["punch" as const] }])).toEqual([]);
   });
 });
+
+describe("extras name matching", () => {
+  it("tells stapling from binding that also says เย็บ", () => {
+    const list = [svc("b", "เย็บเล่ม"), svc("m", "เย็บมุม", "per_order")];
+    expect(matchService(list, "staple")?.id).toBe("m");
+    expect(matchService(list, "binding")?.id).toBe("b");
+  });
+
+  it("understands common other names", () => {
+    expect(matchService([svc("x", "ปก PVC")], "clear_cover")?.id).toBe("x");
+    expect(matchService([svc("y", "แม็กมุมซ้าย")], "staple")?.id).toBe("y");
+  });
+});

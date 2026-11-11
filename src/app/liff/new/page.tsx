@@ -127,7 +127,8 @@ export default function NewOrderPage() {
     }
     if (accepted.length === 0) return;
 
-    updateDraft((d) => ({ ...d, files: [...d.files, ...accepted] }));
+    // Shop services were picked for the old file list: pick again after choosing a shop
+    updateDraft((d) => ({ ...d, files: [...d.files, ...accepted], services: [] }));
 
     for (const item of accepted) {
       countPages(picked.get(item.key)!).then((r) =>
@@ -168,6 +169,7 @@ export default function NewOrderPage() {
         copies: f.copies,
         extras: f.extras,
       })),
+      services: [],
     }));
     toast("ใช้ค่านี้กับทุกไฟล์แล้ว", "success");
   }
@@ -288,7 +290,10 @@ export default function NewOrderPage() {
         <details className="group rounded-card bg-info-50 px-4 py-3 text-sm text-info-ink">
           <summary className="flex cursor-pointer list-none items-center gap-2 font-medium">
             <span aria-hidden="true">🔒</span>
-            ร้านจะเปิดและดาวน์โหลดไฟล์ของคุณเพื่อปริ้น
+            <span>
+              ร้านจะเปิดและดาวน์โหลดไฟล์ของคุณเพื่อปริ้น{" "}
+              <b>หากเป็นเอกสารลับไม่ควรส่งผ่านบริการนี้</b>
+            </span>
             <span className="ml-auto text-xs underline group-open:hidden">อ่านเพิ่ม</span>
           </summary>
           <p className="mt-2">
@@ -336,12 +341,19 @@ function FileCard({
   const isPdf = f.mime === "application/pdf";
   const extras = f.extras ?? [];
   // Only the first file starts open, so a long list stays short; a file that needs input opens too
-  const needsInput = !f.counting && (pagesInvalid || (isPdf && f.pageWarning !== null));
+  const copiesInvalid = !Number.isInteger(f.copies) || f.copies < 1 || f.copies > 99;
+  const needsInput = !f.counting && (pagesInvalid || copiesInvalid);
   const [open, setOpen] = useState(index === 0);
   const expanded = open || needsInput;
 
   function toggleExtra(k: ExtraKey) {
-    set({ extras: extras.includes(k) ? extras.filter((x) => x !== k) : [...extras, k] });
+    const next = extras.includes(k) ? extras.filter((x) => x !== k) : [...extras, k];
+    // Shop services were ticked from the old wishes: they are picked again after choosing a shop
+    updateDraft((d) => ({
+      ...d,
+      services: [],
+      files: d.files.map((x) => (x.key === f.key ? { ...x, extras: next } : x)),
+    }));
   }
 
   return (

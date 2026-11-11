@@ -70,7 +70,13 @@ function load() {
       // A file whose upload had not finished cannot be retried: its contents are gone. Drop it.
       saved.files = saved.files
         .filter((f) => f.upload === "done" && f.path !== null)
-        .map((f) => ({ ...f, counting: false, extras: f.extras ?? [] }));
+        .map((f) => ({
+          ...f,
+          counting: false,
+          extras: f.extras ?? [],
+          // JSON turns NaN into null: an emptied copies box comes back as 1
+          copies: typeof f.copies === "number" ? f.copies : 1,
+        }));
       state = { ...EMPTY, ...saved };
     }
   } catch {

@@ -7,9 +7,15 @@ import type { ShopListItem, SelectedService } from "./types";
  * still change it on the summary page. A shop without a match is shown as "ไม่มี ...".
  */
 export const EXTRAS = [
-  { key: "clear_cover", label: "ปกใส", icon: "📘", match: /ปกใส|ปกพลาสติก/ },
-  { key: "binding", label: "เข้าเล่ม", icon: "📚", match: /เข้าเล่ม|สันกาว|สันเกลียว|สันห่วง/ },
-  { key: "staple", label: "เย็บมุม", icon: "📎", match: /เย็บ/ },
+  { key: "clear_cover", label: "ปกใส", icon: "📘", match: /ปกใส|ปกพลาสติก|ปก\s*PVC/i },
+  {
+    key: "binding",
+    label: "เข้าเล่ม",
+    icon: "📚",
+    match: /เข้าเล่ม|สันกาว|สันเกลียว|สันห่วง|เย็บเล่ม|เย็บกี่|เย็บสัน/,
+  },
+  // Not every "เย็บ": เย็บเล่ม / เย็บกี่ / เย็บสัน are binding
+  { key: "staple", label: "เย็บมุม", icon: "📎", match: /เย็บมุม|แม็ก|ลวด/ },
   { key: "laminate", label: "เคลือบ", icon: "✨", match: /เคลือบ/ },
   { key: "punch", label: "เจาะรู", icon: "🕳️", match: /เจาะ/ },
 ] as const;
