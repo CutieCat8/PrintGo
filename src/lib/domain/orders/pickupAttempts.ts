@@ -67,3 +67,26 @@ export async function checkPickupCode(
 
   return sameCode(normalizePickupCode(given), actual);
 }
+
+/**
+ * Removes pickup tries older than a day, whatever the order (they only matter for 10 minutes).
+ * Run by the expire cron so tries of finished orders do not stay in `webhook_events` forever.
+ * Only rows with source `pickup_attempt` are touched. Returns how many were removed.
+ */
+export async function cleanupPickupAttempts(
+  db: SupabaseClient,
+  now: Date = new Date(),
+): Promise<number> {
+  const dayAgo = new Date(now.getTime() - 24 * 3600_000).toISOString();
+  const { data, error } = await db
+    .from("webhook_events")
+    .delete()
+    .eq("source", SOURCE)
+    .lt("created_at", dayAgo)
+    .select("id");
+  if (error) {
+    console.error(`[pickup] could not remove old tries (db code ${error.code})`);
+    throw new ApiError("INTERNAL", 500);
+  }
+  return (data ?? []).length;
+}

@@ -101,6 +101,7 @@ class Query implements PromiseLike<Result> {
   private upsertOpts: { onConflict?: string; ignoreDuplicates?: boolean } = {};
   private filters: ((r: Row) => boolean)[] = [];
   private returning = false;
+  private invalidInput = false;
   private mode: "maybe" | "one" | null = null;
   private limitN = Infinity;
   private orderBy: { col: string; asc: boolean } | null = null;
@@ -166,6 +167,8 @@ class Query implements PromiseLike<Result> {
     return this;
   }
   gt(col: string, v: unknown) {
+    // Postgres refuses "" as a uuid ("invalid input syntax for type uuid"); so does this fake.
+    if (v === "" && col.endsWith("id")) this.invalidInput = true;
     this.filters.push((r) => (r[col] as string) > (v as string));
     return this;
   }
@@ -227,6 +230,12 @@ class Query implements PromiseLike<Result> {
 
   private async run(): Promise<Result> {
     await Promise.resolve();
+    if (this.invalidInput) {
+      return {
+        data: null,
+        error: { code: "22P02", message: "invalid input syntax for type uuid" },
+      };
+    }
     const failure = this.db.failures.get(`${this.table}.${this.op}`);
     if (failure) return { data: null, error: { code: "XX000", message: failure } };
 

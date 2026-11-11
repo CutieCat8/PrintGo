@@ -40,15 +40,12 @@ async function cleanupOrderFiles(now: Date): Promise<number> {
   // Walk the files that still exist, page by page (by id), and ask which of their orders ended
   // long enough ago. Paging this way means no query ever has to return every old order at once.
   let deleted = 0;
-  let lastId = "";
+  // The first page has no lower bound (an empty string is not a valid uuid for Postgres).
+  let lastId: string | null = null;
   for (let page = 0; page < MAX_PAGES; page++) {
-    const files = await db
-      .from("order_files")
-      .select("id, order_id, storage_path")
-      .is("deleted_at", null)
-      .gt("id", lastId)
-      .order("id", { ascending: true })
-      .limit(FILE_PAGE);
+    let query = db.from("order_files").select("id, order_id, storage_path").is("deleted_at", null);
+    if (lastId !== null) query = query.gt("id", lastId);
+    const files = await query.order("id", { ascending: true }).limit(FILE_PAGE);
     if (files.error) throw files.error;
     const rows = files.data ?? [];
     if (rows.length === 0) break;
