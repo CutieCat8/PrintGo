@@ -293,3 +293,24 @@ describe("reviewer fixes", () => {
     }
   });
 });
+
+describe("mock errors match the real API", () => {
+  it("unsupported print setting -> same message and details as lib/domain/pricing/estimate.ts", async () => {
+    const err = await mockApi
+      .estimate({
+        shopId: "00000000-0000-4000-8000-0000000000a1",
+        fulfillment: "pickup",
+        files: [
+          { pageCount: 1, color: "bw", paper: "A4", sides: "single", copies: 1 },
+          { pageCount: 2, color: "color", paper: "A3", sides: "double", copies: 1 },
+        ],
+      })
+      .catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(ApiClientError);
+    expect(err).toMatchObject({
+      code: "VALIDATION_ERROR",
+      message: "ร้านนี้ไม่รับงานชุดค่านี้",
+      details: { fileIndex: 1, color: "color", paper: "A3", sides: "double" },
+    });
+  });
+});

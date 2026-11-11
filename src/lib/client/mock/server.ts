@@ -266,23 +266,25 @@ function deliveryFee(shop: Shop, lat: number, lng: number) {
 }
 
 function priceFiles(ms: MockShop, files: FileSettingInput[]) {
-  const unsupported: number[] = [];
   let print = 0;
   let pages = 0;
-  files.forEach((f, i) => {
+  files.forEach((f, fileIndex) => {
     const rule = ms.pricing.rules.find(
       (r) => r.color === f.color && r.paper === f.paper && r.sides === f.sides,
     );
+    // Same message and details as the real API (lib/domain/pricing/estimate.ts): first bad file
+    if (!rule) {
+      fail("VALIDATION_ERROR", "ร้านนี้ไม่รับงานชุดค่านี้", {
+        fileIndex,
+        color: f.color,
+        paper: f.paper,
+        sides: f.sides,
+      });
+    }
     const filePages = f.pageCount * f.copies;
     pages += filePages;
-    if (!rule) unsupported.push(i);
-    else print += filePages * rule.pricePerPageSatang;
+    print += filePages * rule.pricePerPageSatang;
   });
-  if (unsupported.length) {
-    fail("VALIDATION_ERROR", "ร้านนี้ไม่รับงานชุดค่านี้ กรุณาเลือกร้านอื่น", {
-      fileIndexes: unsupported,
-    });
-  }
   return { print, pages };
 }
 

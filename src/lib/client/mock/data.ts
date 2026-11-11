@@ -86,6 +86,13 @@ const CUSTOMER = "00000000-0000-4000-8000-0000000000c1";
 /** Stable uuid for seed rows: prefix + 12 hex digits. */
 const sid = (n: number) => `00000000-0000-4000-8000-${n.toString(16).padStart(12, "0")}`;
 
+function withoutRule(p: ShopPricing, color: string, paper: string, sides: string): ShopPricing {
+  return {
+    ...p,
+    rules: p.rules.filter((r) => !(r.color === color && r.paper === paper && r.sides === sides)),
+  };
+}
+
 function pricing(extra: number, tiers: ShopPricing["tiers"]): ShopPricing {
   const base: [ShopPricing["rules"][number]["color"], "A4" | "A3", "single" | "double", number][] =
     [
@@ -146,9 +153,13 @@ export function createSeed(now = Date.now()): MockDb {
         cutoffMinutes: 30,
       },
       hours: hours("09:00", "20:00"),
-      pricing: pricing(0, [
-        { minPages: 200, note: "200 หน้าขึ้นไป ร้านคิดราคาพิเศษ (ตัวอย่างสมมติ)" },
-      ]),
+      // Shop A does not print colour A3 double-sided, to show "ร้านนี้ไม่รับงานแบบ ..." in mock mode
+      pricing: withoutRule(
+        pricing(0, [{ minPages: 200, note: "200 หน้าขึ้นไป ร้านคิดราคาพิเศษ (ตัวอย่างสมมติ)" }]),
+        "color",
+        "A3",
+        "double",
+      ),
       services: [
         service(1, "เย็บมุม", 500, "per_set", 1),
         service(2, "ปกใส", 1500, "per_set", 2),

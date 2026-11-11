@@ -13,13 +13,22 @@ export const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === "true";
  */
 function lazyMock(): Api {
   const load = () => import("./mock/server").then((m) => m.mockApi);
+  const cache = new Map<string, (...args: unknown[]) => Promise<unknown>>();
   return new Proxy({} as Api, {
-    get:
-      (_target, name: string) =>
-      async (...args: unknown[]) => {
-        const mock = await load();
-        return (mock[name as keyof Api] as (...a: unknown[]) => unknown)(...args);
-      },
+    get(_target, name) {
+      // Not an API function: "then" (so `await api` does not hang), symbols, etc.
+      if (typeof name !== "string" || name === "then") return undefined;
+      let fn = cache.get(name);
+      if (!fn) {
+        // Same function every time, so it is safe in React dependency lists
+        fn = async (...args: unknown[]) => {
+          const mock = await load();
+          return (mock[name as keyof Api] as (...a: unknown[]) => unknown)(...args);
+        };
+        cache.set(name, fn);
+      }
+      return fn;
+    },
   });
 }
 

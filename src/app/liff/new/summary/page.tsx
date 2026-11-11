@@ -61,8 +61,11 @@ export default function SummaryPage() {
   const effective: OrderDraft = { ...draft, fulfillment };
 
   const estimateBody = shop ? toEstimateRequest(effective, shop.id, pos) : null;
-  const estimate = useSWR(estimateBody ? ["estimate", JSON.stringify(estimateBody)] : null, () =>
-    api.estimate(estimateBody!),
+  const estimate = useSWR(
+    estimateBody ? ["estimate", JSON.stringify(estimateBody)] : null,
+    () => api.estimate(estimateBody!),
+    // A 4xx (e.g. the shop cannot print a file) will not fix itself: no background retries
+    { shouldRetryOnError: (e) => !(isApiClientError(e) && e.status < 500) },
   );
 
   const deliveryErrors = {
@@ -109,6 +112,7 @@ export default function SummaryPage() {
 
   function pickAnotherShop() {
     updateDraft((d) => ({ ...d, shopId: null, services: [] }));
+    shops.mutate();
     router.push("/liff/new/shop");
   }
 
