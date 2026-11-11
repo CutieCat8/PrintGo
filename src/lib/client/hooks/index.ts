@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import useSWR, { type SWRConfiguration } from "swr";
 import type { OrderStatus } from "@/lib/db/types";
 import { api } from "../api";
@@ -47,7 +48,7 @@ export function useShops(pos: { lat: number; lng: number } | null) {
   return useSWR(
     ["shops", pos?.lat ?? null, pos?.lng ?? null],
     () => api.listShops(pos ?? undefined),
-    base,
+    { ...base, keepPreviousData: true },
   );
 }
 
@@ -100,4 +101,16 @@ export function useChats(side: Side, enabled = true) {
     () => (side === "customer" ? api.listMyChats() : api.listShopChats()),
     { ...base, refreshInterval: side === "customer" ? POLL.chatsCustomer : POLL.chatsShop },
   );
+}
+
+// --- clock -----------------------------------------------------------------------------------
+
+/** Current time, re-rendered every `everyMs` (for countdowns). */
+export function useNow(everyMs = 1_000): Date {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const t = setInterval(() => setNow(new Date()), everyMs);
+    return () => clearInterval(t);
+  }, [everyMs]);
+  return now;
 }

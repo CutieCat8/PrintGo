@@ -1,15 +1,18 @@
 /**
- * Temporary formatBaht until P1 ships `@/lib/domain/pricing/format` — same name and signature
- * (CONTRACTS section 7). Swap the import in components/ui/Money.tsx when P1 is merged.
- *
- * Integer satang in, "1,250.50" out (no "฿"; the Money component adds it).
- * Uses integer maths only, so no float rounding.
+ * Money helpers for screens. Amounts are integer satang everywhere (CLAUDE.md rule 1).
+ * `formatBaht` is P1's (CONTRACTS section 7): "1,250.50", no "฿" (the Money component adds it).
  */
-export function formatBaht(satang: number): string {
-  if (!Number.isSafeInteger(satang) || satang < 0) {
-    throw new RangeError(`formatBaht expects a non-negative integer of satang, got ${satang}`);
-  }
-  const baht = Math.trunc(satang / 100);
-  const rest = satang % 100;
-  return `${baht.toLocaleString("en-US")}.${String(rest).padStart(2, "0")}`;
+export { formatBaht } from "@/lib/domain/pricing/format";
+
+/**
+ * What a shop types in baht ("120", "1,250.5", "99.75") -> integer satang, or null if it is not a
+ * valid amount (empty, negative, more than 2 decimals, letters). The only place baht becomes satang.
+ * Parsed as text, never through a float.
+ */
+export function parseBahtToSatang(input: string): number | null {
+  const text = input.trim().replace(/,/g, "");
+  const m = /^(\d{1,7})(?:\.(\d{1,2}))?$/.exec(text);
+  if (!m) return null;
+  const satang = Number(m[1]) * 100 + Number((m[2] ?? "").padEnd(2, "0"));
+  return Number.isSafeInteger(satang) ? satang : null;
 }

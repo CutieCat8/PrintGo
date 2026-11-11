@@ -85,6 +85,15 @@ export function setCustomerTokenProvider(provider: TokenProvider) {
   customerToken = provider;
 }
 
+/**
+ * Development only (no LIFF ID set): act as a seed customer through the `x-dev-user` header that
+ * src/lib/auth/dev.ts accepts outside production. Ignored by the server in production.
+ */
+let devCustomerId: string | null = null;
+export function setDevCustomer(id: string | null) {
+  devCustomerId = process.env.NODE_ENV === "production" ? null : id;
+}
+
 // --- request ---------------------------------------------------------------------------------
 
 export type RequestOptions = {
@@ -108,6 +117,7 @@ export async function request<T>(method: string, path: string, opts: RequestOpti
   if (opts.auth === "customer") {
     const token = await customerToken();
     if (token) headers.Authorization = `Bearer ${token}`;
+    else if (devCustomerId) headers["x-dev-user"] = `customer:${devCustomerId}`;
   }
 
   let res: Response;
