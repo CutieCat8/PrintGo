@@ -2,8 +2,7 @@
 
 import useSWR from "swr";
 import { Button, Card, ErrorState, Money, Skeleton } from "@/components/ui";
-import { USE_MOCK, api, errorMessage, isApiClientError } from "@/lib/client/api";
-import { mockDev } from "@/lib/client/mock/server";
+import { USE_MOCK, api, errorMessage, isApiClientError, loadMockDev } from "@/lib/client/api";
 
 /**
  * Stand-in for Arm's <PaymentPanel /> (A-tasks) until it is merged: shows the PromptPay QR from
@@ -60,8 +59,8 @@ export function PaymentSection({
         <Button
           variant="secondary"
           size="sm"
-          onClick={() => {
-            mockDev.pay(orderId);
+          onClick={async () => {
+            (await loadMockDev()).pay(orderId);
             onPaid();
           }}
         >
