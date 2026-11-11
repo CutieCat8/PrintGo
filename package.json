@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "engines": {
-    "node": ">=22.12"
+    "node": "^22.13.0 || >=24"
   },
   "scripts": {
     "dev": "next dev",
@@ -30,17 +30,40 @@
     "swr": "2.5.1",
     "zod": "4.6.7"
   },
+  "overrides": {
+    "eslint-plugin-import": {
+      "eslint": "$eslint"
+    },
+    "eslint-plugin-jsx-a11y": {
+      "eslint": "$eslint"
+    },
+    "eslint-plugin-react": {
+      "eslint": "$eslint"
+    },
+    "eslint": {
+      "minimatch": "11.0.1"
+    },
+    "@eslint/config-array": {
+      "minimatch": "11.0.1"
+    },
+    "@typescript-eslint/typescript-estree": {
+      "minimatch": "11.0.1"
+    }
+  },
   "devDependencies": {
     "@tailwindcss/turbopack": "4.3.3",
     "@types/node": "22.20.5",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "eslint": "^9",
+    "eslint": "^10.14.0",
     "eslint-config-next": "16.4.6",
     "prettier": "3.9.10",
     "supabase": "3.1.0",
     "tailwindcss": "4.3.3",
     "typescript": "^5",
     "vitest": "5.1.0"
+  },
+  "allowScripts": {
+    "fsevents": false
   }
 }
