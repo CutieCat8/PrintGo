@@ -21,7 +21,7 @@
 
 คำสั่ง preview ใช้ Vitest ที่มีอยู่ในโปรเจกต์เพื่อเรียก provider TypeScript ตัวจริง
 ส่วน preview ถูกข้ามในการรัน tests ปกติ ต้องสั่งผ่าน `payment:preview` เท่านั้น
-`verifySlip` ยังเป็น stub คืน `review` เสมอ จนกว่าจะทำ A2
+รายละเอียดการตรวจสลิป A2 อยู่ใน [slip/README.md](slip/README.md)
 
 ## ผลสแกนจริงที่ผู้ทดสอบยืนยัน
 

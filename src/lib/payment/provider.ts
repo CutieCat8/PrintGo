@@ -2,9 +2,12 @@ import "server-only";
 import { ApiError } from "@/lib/errors";
 import { createPromptPayCharge, isPromptPayId } from "./promptpay";
 import type { PaymentProvider } from "./types";
+import { verifySlip } from "./slip";
+import type { SlipContext } from "./slip";
 
 /** Reads env when used, so importing this module never requires credentials. */
-export function getPaymentProvider(): PaymentProvider {
+export function getPaymentProvider(context: SlipContext = {}): PaymentProvider {
+  const slipContext = { ...context };
   return {
     async createCharge({ orderId, amountSatang }) {
       if (typeof orderId !== "string" || orderId.trim().length === 0) {
@@ -17,9 +20,8 @@ export function getPaymentProvider(): PaymentProvider {
       }
       return createPromptPayCharge(promptPayId, amountSatang);
     },
-    async verifySlip(_args) {
-      // A1 stub only. A2 supplies SlipOK/manual verification; never auto-verify.
-      return { result: "review", reason: "ระบบตรวจสลิปยังไม่พร้อม กรุณารอเจ้าหน้าที่ตรวจสอบ" };
+    verifySlip(args) {
+      return verifySlip(args, slipContext);
     },
   };
 }
