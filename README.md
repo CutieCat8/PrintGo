@@ -8,7 +8,13 @@ Working on this repo (people and AI agents): start with `CLAUDE.md`, then `docs/
 
 ## Run it
 
-Needs Node 22.12 or newer.
+Needs Node 22.13+ (22.x), or Node 24 or newer, matching ESLint 10's requirements.
+
+The ESLint plugin peer overrides follow Next.js 16.4's documented ESLint 10
+support while those plugins still declare ESLint 9 peers. Scoped `minimatch`
+overrides pin the security fix to 11.0.1. Remove these overrides once upstream
+dependencies include the updated ranges. `allowScripts.fsevents=false` explicitly
+skips its optional install script; the macOS package ships a prebuilt binary.
 
 ```bash
 npm install
