@@ -854,7 +854,8 @@ describe("nothing else writes orders.status", () => {
     const offenders = sources("src")
       .filter((p) => !p.replace(/\\/g, "/").endsWith("domain/orders/transition.ts"))
       .filter((p) =>
-        /from\(\s*["']orders["']\s*\)\s*\.(update|upsert)\(([^;]{0,300}?)\bstatus\b/.test(
+        // `status` inside the data of update/upsert (before any .eq/.in filter or the end of the statement)
+        /from\(\s*["']orders["']\s*\)\s*\.(?:update|upsert)\((?:(?!\.eq\(|\.in\(|;)[\s\S]){0,300}?\bstatus\b/.test(
           readFileSync(p, "utf8"),
         ),
       );

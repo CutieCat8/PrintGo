@@ -1,15 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getServiceClient } from "@/lib/db/server";
-import {
-  DeliveryRow,
-  OrderFileRow,
-  OrderRow,
-  OrderServiceRow,
-  parseRow,
-  PaymentRow,
-  ShopRow,
-} from "@/lib/db/types";
+import { OrderRow, parseRow, ShopRow } from "@/lib/db/types";
 import { ApiError } from "@/lib/errors";
+import { loadDetailParts } from "./detail";
 import { expireIfDue } from "./expire";
 import { transition } from "./transition";
 import {
@@ -74,28 +67,8 @@ export async function getCustomerOrderDetail(
 ): Promise<OrderDetailView> {
   const db = getServiceClient();
   const row = await expireIfDue(await readOwnOrder(db, customerId, orderId));
-  const shop = await readShop(db, row.shopId);
-
-  const [files, services, payments, delivery] = await Promise.all([
-    db.from("order_files").select("*").eq("order_id", orderId).is("deleted_at", null),
-    db.from("order_services").select("*").eq("order_id", orderId),
-    db
-      .from("payments")
-      .select("*")
-      .eq("order_id", orderId)
-      .order("created_at", { ascending: false })
-      .limit(1),
-    db.from("deliveries").select("*").eq("order_id", orderId).maybeSingle(),
-  ]);
-  for (const res of [files, services, payments, delivery]) if (res.error) throw res.error;
-
-  return presentCustomerOrderDetail(row, {
-    shop: { id: shop.id, name: shop.name, address: shop.address, phone: shop.phone },
-    files: (files.data ?? []).map((r) => parseRow(OrderFileRow, r)),
-    services: (services.data ?? []).map((r) => parseRow(OrderServiceRow, r)),
-    payment: payments.data?.[0] ? parseRow(PaymentRow, payments.data[0]) : null,
-    delivery: delivery.data ? parseRow(DeliveryRow, delivery.data) : null,
-  });
+  const parts = await loadDetailParts(db, row);
+  return presentCustomerOrderDetail(row, parts);
 }
 
 /**

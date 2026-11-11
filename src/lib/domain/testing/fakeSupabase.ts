@@ -135,6 +135,17 @@ class Query implements PromiseLike<Result> {
     );
     return this;
   }
+  gte(col: string, v: unknown) {
+    this.filters.push((r) => (r[col] as string) >= (v as string));
+    return this;
+  }
+  /** SQL LIKE with `%` wildcards only. */
+  like(col: string, pattern: string) {
+    const escape = (part: string) => part.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const re = new RegExp(`^${pattern.split("%").map(escape).join(".*")}$`);
+    this.filters.push((r) => typeof r[col] === "string" && re.test(r[col] as string));
+    return this;
+  }
   gt(col: string, v: unknown) {
     this.filters.push((r) => (r[col] as string) > (v as string));
     return this;
