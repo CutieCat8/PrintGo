@@ -190,7 +190,6 @@ const file = (over: Partial<DraftFile> = {}): DraftFile => ({
   paper: "A4",
   sides: "single",
   copies: 1,
-  extras: [],
   ...over,
 });
 
