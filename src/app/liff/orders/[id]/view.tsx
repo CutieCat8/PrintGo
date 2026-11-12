@@ -229,6 +229,7 @@ function StatusAction({
   // A slip waiting for review counts as paid for the customer: no cancel (D19)
   const slipInReview = o.payment?.status === "pending_review";
   const canCancel = customerCanCancel(o.status) && !slipInReview;
+  const showPayment = paying || slipInReview || o.payment?.status === "rejected";
 
   if (o.status === "submitted") {
     const left = o.responseDeadline ? new Date(o.responseDeadline).getTime() - now.getTime() : null;
@@ -282,7 +283,7 @@ function StatusAction({
               ได้รับสลิปแล้ว กำลังตรวจสอบการชำระเงิน
             </p>
           )}
-          {!paying && canCancel && (
+          {!showPayment && canCancel && (
             <div className="mt-3 grid grid-cols-2 gap-2">
               <Button variant="secondary" onClick={() => setConfirmCancel(true)}>
                 ไม่เอา ยกเลิก
@@ -291,8 +292,13 @@ function StatusAction({
             </div>
           )}
         </Card>
-        {paying && o.totalSatang !== null && (
-          <PaymentSection orderId={o.id} amountSatang={o.totalSatang} onPaid={refresh} />
+        {showPayment && o.totalSatang !== null && (
+          <PaymentSection
+            orderId={o.id}
+            amountSatang={o.totalSatang}
+            deadline={o.paymentDeadline}
+            onPaid={refresh}
+          />
         )}
         {cancelModal}
       </div>
