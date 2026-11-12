@@ -230,7 +230,7 @@ export function ConfirmPanel({
 
   return (
     <Card className="ring-2 ring-accent-ink">
-      <h2 className="text-lg font-semibold text-brand">ยืนยันราคาและเวลาเสร็จ</h2>
+      <h2 className="text-base font-semibold text-ink">ยืนยันราคาและเวลาเสร็จ</h2>
       {manual && (
         <p className="mt-2 rounded-control bg-warning-50 px-3 py-2 text-sm text-warning-ink">
           ออเดอร์นี้เข้าเงื่อนไขส่วนลดหรือมีบริการที่ราคาตามตกลง กรุณากำหนดราคาเอง

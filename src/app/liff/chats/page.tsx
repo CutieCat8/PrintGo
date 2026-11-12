@@ -1,7 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { EmptyState, ErrorState, PageShell, SkeletonCard, StatusBadge } from "@/components/ui";
+import {
+  EmptyState,
+  ErrorState,
+  PageShell,
+  SkeletonCard,
+  StatusBadge,
+  Icon,
+} from "@/components/ui";
 import { errorMessage } from "@/lib/client/api";
 import { formatDayTime } from "@/lib/client/format";
 import { useChats } from "@/lib/client/hooks";
@@ -25,7 +32,7 @@ export default function ChatsPage() {
         <ErrorState description={errorMessage(chats.error)} onRetry={() => chats.mutate()} />
       ) : rooms.length === 0 ? (
         <EmptyState
-          icon="💬"
+          icon={<Icon name="chat" className="size-7" />}
           title="ยังไม่มีแชท"
           description="แชทกับร้านจะเปิดเมื่อคุณส่งออเดอร์"
         />

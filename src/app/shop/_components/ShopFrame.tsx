@@ -10,6 +10,7 @@ import {
   ErrorState,
   Spinner,
   buttonClasses,
+  Icon,
   cx,
   useToast,
 } from "@/components/ui";
@@ -75,7 +76,7 @@ export function ShopFrame({ children }: { children: ReactNode }) {
     return (
       <Centered>
         <EmptyState
-          icon="⛔"
+          icon={<Icon name="lock" className="size-7" />}
           title="บัญชีร้านถูกระงับ"
           description="ร้านของคุณถูกระงับการใช้งาน กรุณาติดต่อแอดมิน PrintGo"
           action={
@@ -95,6 +96,9 @@ export function ShopFrame({ children }: { children: ReactNode }) {
 
 function ActiveDashboard({ children }: { children: ReactNode }) {
   const toast = useToast();
+  // The queue is a full-height split view: no page padding
+  // The chat inbox is a full-height split view: no page padding
+  const flush = usePathname() === "/shop/chats";
   const me = useShopMe();
   const shop = me.data!.shop!;
   const active = me.data!.state === "active";
@@ -161,8 +165,10 @@ function ActiveDashboard({ children }: { children: ReactNode }) {
   return (
     <DashboardShell
       shopName={shop.name}
-      queueBadge={badge}
+      queueBadge={waiting}
+      chatBadge={unread}
       headerActions={<PauseSwitch />}
+      flush={flush}
       banner={banners.length ? <div>{banners}</div> : undefined}
     >
       {children}
@@ -224,7 +230,7 @@ function SoundBanner() {
         className="font-semibold underline"
         onClick={() => unlockAudio().then((ok) => setBlocked(!ok))}
       >
-        🔔 คลิกที่นี่เพื่อเปิดเสียงแจ้งเตือน
+        คลิกที่นี่เพื่อเปิดเสียงแจ้งเตือน
       </button>{" "}
       ·{" "}
       <button
@@ -285,9 +291,7 @@ function PauseSwitch() {
       onClick={toggle}
       className={cx(
         "flex min-h-11 items-center gap-2 rounded-full px-3 text-sm font-medium ring-1 disabled:opacity-60",
-        open
-          ? "bg-success-50 text-success-ink ring-green-300"
-          : "bg-warning-50 text-warning-ink ring-amber-300",
+        open ? "bg-white text-brand ring-white" : "bg-warning-50 text-warning-ink ring-amber-300",
       )}
     >
       <span
@@ -304,7 +308,7 @@ function PauseSwitch() {
           )}
         />
       </span>
-      <span className="hidden sm:inline">{open ? "เปิดรับงาน" : "พักรับงาน"}</span>
+      <span className="hidden sm:inline">{open ? "รับงานอยู่" : "หยุดรับงาน"}</span>
     </button>
   );
 }

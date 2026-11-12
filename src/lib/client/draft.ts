@@ -3,7 +3,6 @@
 import { useSyncExternalStore } from "react";
 import type { ColorMode, Fulfillment, Paper, Sides } from "@/lib/db/types";
 import type { CreateOrderRequest, EstimateRequest, SelectedService } from "./types";
-import type { ExtraKey } from "./extras";
 
 /**
  * The order the customer is putting together across /liff/new -> /shop -> /summary.
@@ -31,8 +30,6 @@ export type DraftFile = {
   paper: Paper;
   sides: Sides;
   copies: number;
-  /** Finishing the customer would like for this file (matched to the chosen shop's services). */
-  extras: ExtraKey[];
 };
 
 export type DeliveryInfo = { name: string; phone: string; address: string };
@@ -73,7 +70,6 @@ function load() {
         .map((f) => ({
           ...f,
           counting: false,
-          extras: f.extras ?? [],
           // JSON turns NaN into null: an emptied copies box comes back as 1
           copies: typeof f.copies === "number" ? f.copies : 1,
         }));
