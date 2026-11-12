@@ -54,16 +54,16 @@ export default function MyOrdersPage() {
   return (
     <PageShell title="สถานะงาน" bottomNav={<LiffBottomNav />}>
       <div
-        role="tablist"
+        role="group"
         aria-label="กรองออเดอร์"
         className="-mx-4 mb-4 flex gap-2 overflow-x-auto px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
         {TABS.map((t) => (
           <button
             key={t.key}
-            role="tab"
+
             type="button"
-            aria-selected={tab === t.key}
+            aria-pressed={tab === t.key}
             onClick={() => setTab(t.key)}
             className={cx(
               "shrink-0 rounded-full px-4 py-2 text-sm font-semibold transition",

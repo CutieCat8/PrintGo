@@ -19,12 +19,13 @@ export function CodeBoxes({
   label?: string;
 }) {
   const refs = useRef<(HTMLInputElement | null)[]>([]);
-  const digits = Array.from({ length: 4 }, (_, i) => value[i] ?? "");
+  // `value` keeps a space for an empty box, so digits stay in the box they were typed in
+  const digits = Array.from({ length: 4 }, (_, i) => (value[i] ?? " ").trim());
 
   function setAt(i: number, d: string) {
-    const next = digits.slice();
-    next[i] = d;
-    onChange(next.join("").replace(/\s/g, ""));
+    const next = digits.map((x) => x || " ");
+    next[i] = d || " ";
+    onChange(next.join("").trimEnd());
   }
 
   return (

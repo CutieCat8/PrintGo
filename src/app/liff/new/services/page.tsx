@@ -1,19 +1,25 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Button, Checkbox, Icon, Money, PageShell, Skeleton, Steps, cx } from "@/components/ui";
+import { Button, Checkbox, Icon, Money, PageShell, Steps, cx } from "@/components/ui";
 import { updateDraft, type OrderDraft } from "@/lib/client/draft";
 import { UNIT_LABEL } from "@/lib/client/format";
 import type { ShopListItem } from "@/lib/client/types";
-import { FlowFooter, useChosenShop, useFlowGuard } from "../../_components/OrderFlow";
+import {
+  FlowFooter,
+  ChosenShopGate,
+  useChosenShop,
+  useFlowGuard,
+} from "../../_components/OrderFlow";
 import { ORDER_STEPS } from "../../_components/steps";
 
 /** C6 · step 4 (optional): the chosen shop's own extra services (D22). */
 export default function ServicesPage() {
   const router = useRouter();
   const { draft, hydrated } = useFlowGuard("shop");
-  const { shop, isLoading } = useChosenShop(draft.shopId);
-  const chosen = draft.services.length;
+  const chosen = useChosenShop(draft.shopId);
+  const { shop } = chosen;
+  const picked = draft.services.length;
 
   return (
     <PageShell
@@ -21,29 +27,29 @@ export default function ServicesPage() {
       subtitle="ไม่บังคับ ข้ามได้"
       backHref="/liff/new/shop"
       footer={
-        <FlowFooter summary={chosen ? `บริการเสริม ${chosen} รายการ` : "ไม่เลือกบริการเสริม"}>
+        <FlowFooter summary={picked ? `บริการเสริม ${picked} รายการ` : "ไม่เลือกบริการเสริม"}>
           <Button fullWidth size="lg" arrow onClick={() => router.push("/liff/new/delivery")}>
-            {chosen ? "ต่อไป: รับงาน" : "ข้าม: ไปเลือกวิธีรับงาน"}
+            {picked ? "ต่อไป: รับงาน" : "ข้าม: ไปเลือกวิธีรับงาน"}
           </Button>
         </FlowFooter>
       }
     >
       <Steps steps={ORDER_STEPS} current={3} className="mb-5" />
-      {!hydrated || isLoading || !shop ? (
-        <Skeleton className="h-64" />
-      ) : (
-        <>
-          <ul className="flex flex-col gap-3">
-            {shop.services.map((s) => (
-              <ServiceRow key={s.id} service={s} draft={draft} />
-            ))}
-          </ul>
-          <p className="mt-4 flex gap-2 rounded-card bg-surface px-4 py-3 text-sm text-ink-muted ring-1 ring-line">
-            <Icon name="chat" className="mt-0.5 size-4 shrink-0" />
-            ไม่เลือกก็ได้ · ถ้ามีเรื่องพิเศษ คุยกับร้านทางแชทหลังส่งออเดอร์
-          </p>
-        </>
-      )}
+      <ChosenShopGate hydrated={hydrated} chosen={chosen}>
+        {(shop) => (
+          <>
+            <ul className="flex flex-col gap-3">
+              {shop.services.map((s) => (
+                <ServiceRow key={s.id} service={s} draft={draft} />
+              ))}
+            </ul>
+            <p className="mt-4 flex gap-2 rounded-card bg-surface px-4 py-3 text-sm text-ink-muted ring-1 ring-line">
+              <Icon name="chat" className="mt-0.5 size-4 shrink-0" />
+              ไม่เลือกก็ได้ · ถ้ามีเรื่องพิเศษ คุยกับร้านทางแชทหลังส่งออเดอร์
+            </p>
+          </>
+        )}
+      </ChosenShopGate>
     </PageShell>
   );
 }
