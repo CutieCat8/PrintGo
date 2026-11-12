@@ -29,7 +29,9 @@
     "react-dom": "19.3.0",
     "server-only": "0.0.1",
     "swr": "2.5.1",
-    "zod": "4.6.7"
+    "zod": "4.6.7",
+    "@line/liff": "2.32.0",
+    "pdfjs-dist": "6.5.438"
   },
   "overrides": {
     "eslint-plugin-import": {

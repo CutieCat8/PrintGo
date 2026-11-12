@@ -24,7 +24,7 @@ export function LoginForm() {
 
   if (state === "sent") {
     return (
-      <p role="status">
+      <p role="status" className="rounded-control bg-success-50 p-3 text-success-ink">
         ส่งลิงก์ไปที่ {email} แล้ว กรุณาเปิดอีเมลและกดลิงก์ในเบราว์เซอร์เดียวกับที่ใช้ขอลิงก์นี้
       </p>
     );
@@ -33,11 +33,11 @@ export function LoginForm() {
   return (
     <form onSubmit={submit} className="flex flex-col gap-3">
       {linkFailed && (
-        <p role="alert" className="text-sm text-red-600">
+        <p role="alert" className="rounded-control bg-danger-50 p-2 text-sm text-danger">
           ลิงก์หมดอายุหรือถูกใช้ไปแล้ว กรุณาขอลิงก์ใหม่
         </p>
       )}
-      <label className="flex flex-col gap-1 text-sm">
+      <label className="flex flex-col gap-1.5 font-medium">
         อีเมล
         <input
           type="email"
@@ -45,18 +45,18 @@ export function LoginForm() {
           autoComplete="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="rounded border border-gray-300 px-3 py-2 text-base"
+          className="min-h-11 rounded-control border border-line bg-surface px-3 py-2 text-base font-normal focus:border-brand focus:ring-2 focus:ring-accent-ink/50 focus:outline-none"
         />
       </label>
       <button
         type="submit"
         disabled={state === "sending"}
-        className="rounded bg-black px-4 py-2 text-white disabled:opacity-50"
+        className="min-h-12 rounded-control bg-accent-ink px-4 py-2 text-lg font-semibold text-white shadow-sm hover:bg-accent-ink-hover disabled:opacity-50"
       >
         {state === "sending" ? "กำลังส่ง..." : "ส่งลิงก์เข้าสู่ระบบ"}
       </button>
       {state === "failed" && (
-        <p role="alert" className="text-sm text-red-600">
+        <p role="alert" className="rounded-control bg-danger-50 p-2 text-sm text-danger">
           ส่งลิงก์ไม่สำเร็จ กรุณาตรวจอีเมลแล้วลองใหม่ (ถ้าขอบ่อยเกินไปอาจต้องรอสักครู่)
         </p>
       )}
