@@ -107,9 +107,32 @@ async function generatePickupCode(db: SupabaseClient, shopId: string): Promise<s
 /**
  * The only function that changes `orders.status` (CLAUDE.md rule 2).
  * Validates the step against the rules table, updates the row with a conditional atomic update
- * (`where id = $id and status = any($from)`), then runs the step's side effects and notifies.
+ * (`where id = $id and status = any($from)`), with financial side effects in a database transaction, then notifies.
  */
 export async function transition(args: TransitionArgs): Promise<OrderRow> {
+  return runTransition(args);
+}
+
+/** Server-only payment completion shares transition validation and its atomic persistence. */
+export async function finalizePayment(args: {
+  orderId: string;
+  paymentId: string;
+  slipRef?: string;
+  verifiedBy: "slipok" | "admin";
+}): Promise<OrderRow> {
+  return runTransition(
+    {
+      orderId: args.orderId,
+      from: "awaiting_payment",
+      to: "paid",
+      actor: args.verifiedBy === "admin" ? "admin" : "system",
+    },
+    args,
+  );
+}
+
+type PaymentContext = { paymentId: string; slipRef?: string; verifiedBy: "slipok" | "admin" };
+async function runTransition(args: TransitionArgs, payment?: PaymentContext): Promise<OrderRow> {
   const { orderId, to, actor } = args;
   const from = [...new Set(Array.isArray(args.from) ? args.from : [args.from])];
   if (from.length === 0) throw invalid("ไม่ระบุสถานะเดิม");
@@ -126,7 +149,12 @@ export async function transition(args: TransitionArgs): Promise<OrderRow> {
 
   const db = getServiceClient();
   const order = await readOrder(db, orderId);
-  if (!from.includes(order.status)) throw conflict(order.status, from, to);
+  // Finalizer replays are checked under the database lock, even if the order advanced.
+  if (!from.includes(order.status) && !payment) throw conflict(order.status, from, to);
+  if (payment && order.status !== "awaiting_payment") {
+    const replay = await persistFinance(db, args, {}, undefined, payment);
+    return replay.order;
+  }
   if (rule.fulfillment && order.fulfillment !== rule.fulfillment) {
     throw new ApiError("ORDER_INVALID_TRANSITION", 409, undefined, {
       currentStatus: order.status,
@@ -137,7 +165,6 @@ export async function transition(args: TransitionArgs): Promise<OrderRow> {
 
   const now = new Date();
   const values: Record<string, unknown> = { status: to, updatedAt: now.toISOString() };
-  let reason: string | undefined;
   let refundAmount: number | undefined;
 
   if (rule.requiresReason) {
@@ -145,7 +172,6 @@ export async function transition(args: TransitionArgs): Promise<OrderRow> {
     if (text === "" || text.length > MAX_REASON_LENGTH) {
       throw invalid("ต้องระบุเหตุผล", { field: "rejectReason" });
     }
-    reason = text;
     values.rejectReason = text;
   }
 
@@ -238,44 +264,38 @@ export async function transition(args: TransitionArgs): Promise<OrderRow> {
     }
   }
 
-  // Conditional atomic update: if another request moved the order first, no row comes back.
-  const { data, error } = await db
-    .from("orders")
-    .update(toDb(values))
-    .eq("id", orderId)
-    .in("status", from)
-    .select()
-    .maybeSingle();
-  if (error) {
-    // The database message can quote the failing row, which holds the pickup code: log only the code.
-    console.error(`[transition] update failed for order ${orderId} (db code ${error.code})`);
-    throw new ApiError("INTERNAL", 500);
-  }
-  if (!data) {
-    const current = await readOrder(db, orderId);
-    throw conflict(current.status, from, to);
-  }
-  const updated = parseRow(OrderRow, data);
-
-  // Side effects insert at most once, so a repeated call cannot double them. They are NOT atomic with the
-  // status change: if one fails the status stays changed and a retry gets 409, so the missing row is not
-  // recreated (needs a database function / a repair job; see docs/API.md section 6).
-  try {
-    for (const effect of rule.effects) {
-      if (effect === "on_paid") await createSettlement(db, updated);
-      if (effect === "create_refund") {
-        await createRefund(db, updated.id, refundAmount as number, reason as string);
+  const financial = rule.effects.includes("on_paid") || rule.effects.includes("create_refund");
+  let updated: OrderRow;
+  if (financial) {
+    let result: { order: OrderRow; changed: boolean } | undefined;
+    for (let retry = 0; retry < 3; retry++) {
+      try {
+        result = await persistFinance(db, args, values, refundAmount, payment);
+        break;
+      } catch (error) {
+        if (!(error instanceof PickupCollision) || retry === 2)
+          throw error instanceof PickupCollision ? new ApiError("INTERNAL", 500) : error;
+        values.pickupCode = await generatePickupCode(db, order.shopId);
       }
-      if (effect === "create_delivery") await createDeliveryForOrder(updated.id);
     }
-  } catch (err) {
-    // The status already changed, so report loudly; never log the pickup code.
-    console.error(
-      `[transition] side effect failed for order ${updated.id} (${order.status} -> ${to}): ${
-        err instanceof Error ? err.message : "unknown error"
-      }`,
-    );
-    throw err;
+    updated = result!.order;
+    if (!result!.changed) return updated;
+  } else {
+    const { data, error } = await db
+      .from("orders")
+      .update(toDb(values))
+      .eq("id", orderId)
+      .in("status", from)
+      .select()
+      .maybeSingle();
+    if (error) throw new ApiError("INTERNAL", 500);
+    if (!data) {
+      const current = await readOrder(db, orderId);
+      throw conflict(current.status, from, to);
+    }
+    updated = parseRow(OrderRow, data);
+    // External delivery work remains outside the financial RPC.
+    if (rule.effects.includes("create_delivery")) await createDeliveryForOrder(updated.id);
   }
 
   if (rule.notify) {
@@ -292,30 +312,36 @@ export async function transition(args: TransitionArgs): Promise<OrderRow> {
   return updated;
 }
 
-async function createSettlement(db: SupabaseClient, order: OrderRow): Promise<void> {
-  const { error } = await db.from("settlements").upsert(
-    {
-      shop_id: order.shopId,
-      order_id: order.id,
-      amount_satang: order.printSubtotalSatang,
-      status: "pending",
-    },
-    { onConflict: "order_id", ignoreDuplicates: true },
-  );
-  if (error) throw error;
-}
-
-async function createRefund(
+class PickupCollision extends Error {}
+async function persistFinance(
   db: SupabaseClient,
-  orderId: string,
-  amountSatang: number,
-  reason: string,
-): Promise<void> {
-  const existing = await db.from("refunds").select("id").eq("order_id", orderId).limit(1);
-  if (existing.error) throw existing.error;
-  if ((existing.data ?? []).length > 0) return;
-  const { error } = await db
-    .from("refunds")
-    .insert({ order_id: orderId, amount_satang: amountSatang, reason, status: "pending" });
-  if (error) throw error;
+  args: TransitionArgs,
+  values: Record<string, unknown>,
+  refundAmount?: number,
+  payment?: PaymentContext,
+): Promise<{ order: OrderRow; changed: boolean }> {
+  const { data, error } = await db.rpc("transition_order_finance", {
+    p_order_id: args.orderId,
+    p_from: Array.isArray(args.from) ? args.from : [args.from],
+    p_to: args.to,
+    p_actor: args.actor,
+    p_values: toDb(values),
+    // Shop rejection always uses full refund; only admin can specify an amount.
+    p_refund_satang: args.actor === "admin" ? (refundAmount ?? null) : null,
+    p_payment_id: payment?.paymentId ?? null,
+    p_slip_ref: payment?.slipRef ?? null,
+    p_verifier: payment?.verifiedBy ?? null,
+  });
+  if (error) {
+    if (error.code === "PT410") throw new PickupCollision();
+    if (error.code === "PT409") throw new ApiError("ORDER_INVALID_TRANSITION", 409);
+    if (error.code === "PT404") throw new ApiError("NOT_FOUND", 404);
+    if (error.code === "PT422") throw new ApiError("VALIDATION_ERROR", 422);
+    if (error.code === "23505" && /payments_slip_ref_key/.test(error.message ?? ""))
+      throw new ApiError("PAYMENT_DUPLICATE_SLIP", 409);
+    // Never expose database messages/details (may contain pickup codes or slip references).
+    throw new ApiError("INTERNAL", 500);
+  }
+  if (!data || typeof data.changed !== "boolean") throw new ApiError("INTERNAL", 500);
+  return { order: parseRow(OrderRow, data.order), changed: data.changed };
 }

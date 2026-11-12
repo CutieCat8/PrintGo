@@ -2,6 +2,7 @@ import "server-only";
 import { createHash, randomUUID } from "node:crypto";
 import { z } from "zod";
 import type { OrderRow, PaymentRow } from "@/lib/db/types";
+import { finalizePayment } from "@/lib/domain/orders/transition";
 import { expireIfDue } from "@/lib/domain/orders/expire";
 import { ApiError } from "@/lib/errors";
 import { notify } from "@/lib/line/notify";
@@ -22,8 +23,7 @@ type Dependencies = {
   expire: (order: OrderRow) => Promise<OrderRow>;
   provider: (order: OrderRow) => PaymentProvider;
   notifyRejected: (orderId: string) => Promise<void>;
-  /** Must atomically finalize payment + transition() + settlement. No production
-   * implementation until Sea/Plu supply the shared transaction (PR4 blocker). */
+  /** Atomically finalize payment + transition() + settlement through the shared RPC. */
   finalizeVerified?: (orderId: string, paymentId: string, slipRef: string) => Promise<void>;
 };
 
@@ -160,13 +160,13 @@ export function createPaymentService(deps: Dependencies) {
           return { status: "rejected", reason: result.reason };
         }
         if (result.result === "verified" && result.slipRef) {
-          if (!(await deps.store.finish(payment.id, slipPath, { slipRef: result.slipRef })))
-            return latestOutcome(orderId, payment.id);
           if (deps.finalizeVerified) {
-            payable(await own(customerId, orderId));
+            // The RPC checks status/deadline under lock and recognizes a concurrent admin approval.
             await deps.finalizeVerified(orderId, payment.id, result.slipRef);
             return { status: "verified" };
           }
+          if (!(await deps.store.finish(payment.id, slipPath, { slipRef: result.slipRef })))
+            return latestOutcome(orderId, payment.id);
         }
         // Fail closed: do not use PR4's non-atomic paid/settlement sequence.
         // Preserve the slip/ref for admin review until the shared transaction exists.
@@ -195,5 +195,8 @@ export function getPaymentService() {
     // O9 until Sea confirms branch receiver configuration; no real verification is enabled here.
     provider: (order) => getPaymentProvider({ orderCreatedAt: order.createdAt }),
     notifyRejected: (orderId) => notify(orderId, "payment_rejected"),
+    finalizeVerified: async (orderId, paymentId, slipRef) => {
+      await finalizePayment({ orderId, paymentId, slipRef, verifiedBy: "slipok" });
+    },
   });
 }
