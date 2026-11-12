@@ -6,6 +6,7 @@ import {
   bangkokWeekday,
   etaText,
   formatCountdown,
+  formatTime,
   isThaiPhone,
   nextBangkokDate,
 } from "./format";
@@ -135,6 +136,14 @@ describe("customerCanCancel (D19)", () => {
 });
 
 describe("Bangkok time", () => {
+  it.each([
+    ["2026-11-12T05:00:00Z", "12:00"],
+    ["2026-11-12T02:05:00Z", "09:05"],
+    ["2026-11-12T16:59:00Z", "23:59"],
+    [new Date("2026-11-11T17:00:00Z"), "00:00"],
+  ])("formats %s as bare 24-hour Bangkok time without locale suffixes", (value, expected) => {
+    expect(formatTime(value)).toBe(expected);
+  });
   it("builds +07:00 instants and reads them back", () => {
     const iso = bangkokIso("2026-11-12", "12:00");
     expect(new Date(iso).toISOString()).toBe("2026-11-12T05:00:00.000Z");

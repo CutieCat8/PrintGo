@@ -26,12 +26,17 @@ const dayKey = (d: Date) => new Intl.DateTimeFormat("en-CA", { timeZone: TZ }).f
 
 /** "14:05" */
 export function formatTime(iso: string | Date): string {
-  return new Intl.DateTimeFormat("th-TH", {
+  const parts = new Intl.DateTimeFormat("th-TH", {
     timeZone: TZ,
+    numberingSystem: "latn",
     hour: "2-digit",
     minute: "2-digit",
-    hour12: false,
-  }).format(new Date(iso));
+    hourCycle: "h23",
+  }).formatToParts(new Date(iso));
+  // ICU versions may append a Thai unit as a literal. Callers add their own
+  // suffix, so keep only the explicit hour/minute fields in this HH:mm helper.
+  const fields = new Map(parts.map((part) => [part.type, part.value]));
+  return `${fields.get("hour")}:${fields.get("minute")}`;
 }
 
 /** "วันนี้ 14:05" · "พรุ่งนี้ 12:00" · "เมื่อวาน 09:10" · "12 พ.ย. 14:05" */
