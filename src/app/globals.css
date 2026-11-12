@@ -1,1 +1,80 @@
 @import "tailwindcss";
+
+/*
+ * PrintGo theme. Use these tokens (bg-brand, text-accent-ink, rounded-card …) instead of raw hex values.
+ * Light only on purpose: LINE's dark mode must not hide text, so every page sets its own light background.
+ */
+@theme inline {
+  --font-sans: var(--font-noto-thai), ui-sans-serif, system-ui, sans-serif;
+}
+
+@theme {
+  /* Brand: navy = main, orange = accent / primary action */
+  --color-brand: #12284c;
+  --color-brand-700: #1d3a68;
+  --color-brand-600: #2b4f86;
+  --color-brand-100: #dde5f2;
+  --color-brand-50: #eef2f9;
+
+  --color-accent: #f26b21; /* decoration, focus ring, highlights */
+  --color-accent-ink: #c24e0e; /* orange that passes 4.5:1 with white text (buttons, links) */
+  --color-accent-ink-hover: #a8430c;
+  --color-accent-100: #fde3d3;
+  --color-accent-50: #fff4ec;
+
+  /* Neutrals */
+  --color-surface: #ffffff;
+  --color-canvas: #f5f6f8; /* page background */
+  --color-line: #dfe3ea; /* borders */
+  --color-ink: #1a2233; /* body text */
+  --color-ink-muted: #5b6475; /* secondary text, 4.5:1+ on white and canvas */
+
+  /* Feedback */
+  --color-danger: #c62828;
+  --color-danger-hover: #a31f1f;
+  --color-danger-50: #fdecec;
+  --color-warning-50: #fff8e1;
+  --color-warning-ink: #7a5300;
+  --color-success-50: #e8f5ee;
+  --color-success-ink: #1e6b45;
+  --color-info-50: #e8f1fd;
+  --color-info-ink: #1f4f99;
+
+  /* Shape */
+  --radius-control: 0.625rem; /* buttons, inputs */
+  --radius-card: 1rem;
+
+  --shadow-card: 0 1px 2px rgb(18 40 76 / 0.06), 0 1px 3px rgb(18 40 76 / 0.08);
+  --shadow-pop: 0 10px 30px rgb(18 40 76 / 0.18);
+}
+
+html {
+  color-scheme: light;
+}
+
+body {
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-size: 1rem;
+  line-height: 1.6;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* One visible focus style everywhere (keyboard users only) */
+:focus-visible {
+  outline: 3px solid var(--color-accent-ink);
+  outline-offset: 2px;
+}
+
+dialog::backdrop {
+  background: rgb(18 40 76 / 0.45);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

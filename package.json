@@ -19,9 +19,11 @@
     "richmenu": "node --no-warnings --experimental-strip-types --env-file=.env.local scripts/setup-richmenu.mjs"
   },
   "dependencies": {
+    "@line/liff": "2.32.0",
     "@supabase/ssr": "0.12.7",
     "@supabase/supabase-js": "2.119.0",
     "next": "16.4.6",
+    "pdfjs-dist": "6.5.438",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "server-only": "0.0.1",
