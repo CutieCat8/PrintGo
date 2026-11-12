@@ -167,7 +167,10 @@ async function runTransition(args: TransitionArgs, payment?: PaymentContext): Pr
   const values: Record<string, unknown> = { status: to, updatedAt: now.toISOString() };
   let refundAmount: number | undefined;
 
-  if (rule.requiresReason) {
+  if (to === "completed" && actor === "shop" && patch.rejectReason !== undefined) {
+    throw invalid("ขั้นตอนนี้ไม่รับเหตุผลจากร้าน", { field: "rejectReason" });
+  }
+  if (rule.requiresReason || (to === "completed" && actor === "admin" && rule.fulfillment === "pickup")) {
     const text = typeof patch.rejectReason === "string" ? patch.rejectReason.trim() : "";
     if (text === "" || text.length > MAX_REASON_LENGTH) {
       throw invalid("ต้องระบุเหตุผล", { field: "rejectReason" });
