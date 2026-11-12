@@ -2,6 +2,7 @@ import "server-only";
 import { fromDb, toDb } from "@/lib/db/case";
 import { getServiceClient } from "@/lib/db/server";
 import type { Delivery, DeliveryStatus } from "@/lib/db/types";
+import { getGrabProvider } from "./grab";
 import { manualProvider } from "./manual";
 import type { DeliveryProvider, LatLng } from "./types";
 
@@ -13,11 +14,12 @@ export type { LatLng } from "./types";
  * Flex templates (Z6) do not exist in this branch.
  */
 
-/** `DELIVERY_PROVIDER` picks the provider; Grab (Z11) is not built, so it is refused loudly. */
+/** `DELIVERY_PROVIDER` picks the provider; `grab` needs its credentials, otherwise it throws. */
 export function getDeliveryProvider(): DeliveryProvider {
   const name = process.env.DELIVERY_PROVIDER || "manual";
   if (name === "manual") return manualProvider;
-  throw new Error(`DELIVERY_PROVIDER "${name}" is not supported yet`);
+  if (name === "grab") return getGrabProvider();
+  throw new Error(`DELIVERY_PROVIDER "${name}" is not supported`);
 }
 
 const DELIVERY_COLUMNS = "id, provider, status, fee_satang, tracking_url, note, updated_at";
