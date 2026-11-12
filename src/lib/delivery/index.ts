@@ -1,24 +1,98 @@
+import "server-only";
+import { fromDb, toDb } from "@/lib/db/case";
+import { getServiceClient } from "@/lib/db/server";
 import type { Delivery, DeliveryStatus } from "@/lib/db/types";
+import { manualProvider } from "./manual";
+import type { DeliveryProvider, LatLng } from "./types";
+
+export type { LatLng } from "./types";
 
 /**
- * STUBS. Task Z7 replaces the bodies (ManualProvider, later Grab); signatures are fixed by
- * docs/CONTRACTS.md section 7. They exist now so that the state machine (P2), the estimate (P5)
- * and the admin delivery page (A7) can call them today.
+ * Z7. Signatures are fixed by docs/CONTRACTS.md section 7. The state change after an admin update
+ * (`transition` to in_transit/completed + notify) is not wired yet: `transition` (P2) and the
+ * Flex templates (Z6) do not exist in this branch.
  */
-export type LatLng = { lat: number; lng: number };
 
-/** Flat base fee only; Z7 adds the per-km part (O5: sample numbers, not real Grab prices). */
-export async function quoteDelivery(
-  _shopId: string,
-  _dropoff: LatLng,
-): Promise<{ feeSatang: number; estimated: boolean }> {
-  return { feeSatang: Number(process.env.DELIVERY_BASE_SATANG ?? 4000), estimated: true };
+/** `DELIVERY_PROVIDER` picks the provider; Grab (Z11) is not built, so it is refused loudly. */
+export function getDeliveryProvider(): DeliveryProvider {
+  const name = process.env.DELIVERY_PROVIDER || "manual";
+  if (name === "manual") return manualProvider;
+  throw new Error(`DELIVERY_PROVIDER "${name}" is not supported yet`);
 }
 
-/** Called by `transition` when an order enters `courier_requested`. */
+const DELIVERY_COLUMNS = "id, provider, status, fee_satang, tracking_url, note, updated_at";
+
+async function shopLocation(
+  shopId: string,
+): Promise<LatLng & { address: string; name: string; phone: string }> {
+  const { data, error } = await getServiceClient()
+    .from("shops")
+    .select("lat, lng, address, name, phone")
+    .eq("id", shopId)
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function quoteDelivery(
+  shopId: string,
+  dropoff: LatLng,
+): Promise<{ feeSatang: number; estimated: boolean }> {
+  const pickup = await shopLocation(shopId);
+  const { feeSatang, estimated } = await getDeliveryProvider().getQuote({ pickup, dropoff });
+  return { feeSatang, estimated };
+}
+
+/** Called by `transition` when an order enters `courier_requested`. Safe to call twice. */
 export async function createDeliveryForOrder(orderId: string): Promise<Delivery> {
-  console.info(`[delivery stub] create delivery for order ${orderId}`);
-  return stubDelivery("pending_admin");
+  const db = getServiceClient();
+  const existing = await db
+    .from("deliveries")
+    .select(DELIVERY_COLUMNS)
+    .eq("order_id", orderId)
+    .maybeSingle();
+  if (existing.error) throw existing.error;
+  if (existing.data) return fromDb(existing.data) as Delivery;
+
+  const { data: order, error } = await db
+    .from("orders")
+    .select(
+      "shop_id, delivery_address, delivery_lat, delivery_lng, delivery_recipient_name, delivery_recipient_phone",
+    )
+    .eq("id", orderId)
+    .single();
+  if (error) throw error;
+  if (order.delivery_lat === null || order.delivery_lng === null) {
+    throw new Error(`Order ${orderId} has no delivery destination`);
+  }
+
+  const provider = getDeliveryProvider();
+  const result = await provider.create({
+    orderId,
+    pickup: await shopLocation(order.shop_id),
+    dropoff: {
+      lat: order.delivery_lat,
+      lng: order.delivery_lng,
+      address: order.delivery_address,
+      name: order.delivery_recipient_name,
+      phone: order.delivery_recipient_phone,
+    },
+  });
+
+  const inserted = await db
+    .from("deliveries")
+    .insert(
+      toDb({
+        orderId,
+        provider: provider.name,
+        providerRef: result.providerRef,
+        status: result.status,
+      }),
+    )
+    .select(DELIVERY_COLUMNS)
+    .single();
+  if (inserted.error) throw inserted.error;
+  return fromDb(inserted.data) as Delivery;
 }
 
 /** Called by the admin page after the admin has booked the rider by hand. */
@@ -26,21 +100,12 @@ export async function applyDeliveryUpdate(
   orderId: string,
   update: { status: DeliveryStatus; feeSatang?: number; trackingUrl?: string; note?: string },
 ): Promise<Delivery> {
-  console.info(`[delivery stub] ${update.status} for order ${orderId}`);
-  return stubDelivery(update.status, update);
-}
-
-function stubDelivery(
-  status: DeliveryStatus,
-  extra: { feeSatang?: number; trackingUrl?: string; note?: string } = {},
-): Delivery {
-  return {
-    id: crypto.randomUUID(),
-    provider: "manual",
-    status,
-    feeSatang: extra.feeSatang ?? null,
-    trackingUrl: extra.trackingUrl ?? null,
-    note: extra.note ?? null,
-    updatedAt: new Date().toISOString(),
-  };
+  const { data, error } = await getServiceClient()
+    .from("deliveries")
+    .update(toDb(update))
+    .eq("order_id", orderId)
+    .select(DELIVERY_COLUMNS)
+    .single();
+  if (error) throw error;
+  return fromDb(data) as Delivery;
 }
