@@ -21,12 +21,12 @@ type FieldProps = {
 };
 
 const controlBase =
-  "w-full rounded-control border bg-surface px-3 text-base text-ink placeholder:text-ink-muted/80 " +
+  "w-full rounded-control border bg-surface px-4 text-base text-ink placeholder:text-ink-subtle " +
   "disabled:cursor-not-allowed disabled:bg-canvas disabled:text-ink-muted " +
   "focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-accent-ink/50 focus-visible:border-accent-ink";
 
 function controlClass(error?: string) {
-  return cx(controlBase, error ? "border-danger" : "border-line");
+  return cx(controlBase, error ? "border-danger" : "border-line-strong");
 }
 
 function describedBy(id: string, hint?: ReactNode, error?: string) {
@@ -45,7 +45,7 @@ function FieldFrame({
 }: FieldProps & { id: string; children: ReactNode; extra?: ReactNode }) {
   return (
     <div className={cx("flex flex-col gap-1.5", className)}>
-      <label htmlFor={id} className="font-medium text-ink">
+      <label htmlFor={id} className="text-sm font-medium text-ink">
         {label}
         {required && (
           <span className="ml-0.5 text-danger" aria-hidden="true">
@@ -102,7 +102,7 @@ export function Input({
         required={required}
         aria-invalid={error ? true : undefined}
         aria-describedby={describedBy(id, hint, error)}
-        className={cx(controlClass(error), "min-h-11")}
+        className={cx(controlClass(error), "min-h-12")}
         {...rest}
       />
     </FieldFrame>
@@ -197,7 +197,7 @@ export function Select({
         required={required}
         aria-invalid={error ? true : undefined}
         aria-describedby={describedBy(id, hint, error)}
-        className={cx(controlClass(error), "min-h-11")}
+        className={cx(controlClass(error), "min-h-12")}
         {...rest}
       >
         {placeholder !== undefined && <option value="">{placeholder}</option>}

@@ -26,7 +26,7 @@ export function Segmented<T extends string>({
   return (
     <fieldset className={cx("min-w-0", className)}>
       <legend className="mb-1.5 text-sm font-medium text-ink-muted">{label}</legend>
-      <div className="flex rounded-control bg-canvas p-1 ring-1 ring-line">
+      <div className="flex rounded-control bg-line/70 p-1">
         {options.map((o) => {
           const checked = o.value === value;
           return (
@@ -35,9 +35,7 @@ export function Segmented<T extends string>({
               className={cx(
                 "flex min-h-10 flex-1 cursor-pointer flex-col items-center justify-center rounded-[calc(var(--radius-control)-4px)] px-2 text-center text-sm font-medium transition",
                 "has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-accent-ink",
-                checked
-                  ? "bg-surface text-brand shadow-card ring-1 ring-brand/20"
-                  : "text-ink-muted hover:text-brand",
+                checked ? "bg-surface text-ink shadow-raised" : "text-ink-muted hover:text-ink",
               )}
             >
               <input
