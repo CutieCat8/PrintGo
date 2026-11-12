@@ -287,7 +287,7 @@ describe("submit slip", () => {
     });
     expect(h.verifySlip).not.toHaveBeenCalled();
   });
-  it("verified SlipOK response stays pending_review until a shared atomic finalizer exists", async () => {
+  it("a caller without a finalizer conservatively preserves pending_review", async () => {
     const h = setup();
     h.verifySlip.mockResolvedValue({ result: "verified", slipRef: "FICTIONALREF" });
     expect(await h.service.submit(customerId, orderId, path())).toEqual({
@@ -312,5 +312,33 @@ describe("submit slip", () => {
     ]);
     expect(finalizeVerified).toHaveBeenCalledOnce();
     expect(settlements).toHaveLength(1);
+  });
+  it("does not write the verified slip reference separately before the transaction", async () => {
+    const h = setup();
+    h.verifySlip.mockResolvedValue({ result: "verified", slipRef: "FICTIONALREF" });
+    const finalizeVerified = vi.fn(async () => {
+      throw new Error("fictional rollback");
+    });
+    const service = createPaymentService({ ...h.deps, finalizeVerified });
+    await expect(service.submit(customerId, orderId, path())).rejects.toMatchObject({
+      code: "INTERNAL",
+    });
+    expect([...h.store.rows.values()][0]).toMatchObject({
+      status: "pending_review",
+      slipRef: null,
+    });
+    expect(h.store.order.status).toBe("awaiting_payment");
+  });
+  it("lets the atomic finalizer arbitrate an admin approval during provider verification", async () => {
+    const h = setup();
+    h.verifySlip.mockImplementation(async () => {
+      h.store.order.status = "paid";
+      [...h.store.rows.values()][0].status = "verified";
+      return { result: "verified", slipRef: "FICTIONALREF" };
+    });
+    const finalizeVerified = vi.fn().mockResolvedValue(undefined);
+    const service = createPaymentService({ ...h.deps, finalizeVerified });
+    expect(await service.submit(customerId, orderId, path())).toEqual({ status: "verified" });
+    expect(finalizeVerified).toHaveBeenCalledOnce();
   });
 });

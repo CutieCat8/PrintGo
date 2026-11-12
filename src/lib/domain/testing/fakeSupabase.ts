@@ -58,6 +58,30 @@ let idCounter = 0;
 export const fakeUuid = () => `00000000-0000-4000-8000-${String(++idCounter).padStart(12, "0")}`;
 
 export class FakeSupabase {
+  /** RPC response stand-in only; PostgreSQL integration tests prove actual transactions. */
+  async rpc(name: string, args: Record<string, unknown>) {
+    await Promise.resolve();
+    if (name !== "transition_order_finance") throw new Error("Unknown test RPC");
+    const order = this.rows("orders").find((row) => row.id === args.p_order_id);
+    if (!order || !(args.p_from as string[]).includes(order.status as string))
+      return { data: null, error: { code: "PT409" } };
+    const table = args.p_to === "paid" ? "settlements" : "refunds";
+    if (this.failures.has(`${table}.insert`) || this.failures.has("orders.update"))
+      return { data: null, error: { code: "23514" } };
+    Object.assign(order, args.p_values);
+    this.rows(table).push({
+      id: fakeUuid(),
+      order_id: order.id,
+      status: "pending",
+      ...(table === "settlements"
+        ? { shop_id: order.shop_id, amount_satang: order.print_subtotal_satang }
+        : {
+            amount_satang: args.p_refund_satang ?? order.total_satang,
+            reason: order.reject_reason,
+          }),
+    });
+    return { data: { order: { ...order }, changed: true }, error: null };
+  }
   tables: Record<string, Row[]> = {};
   buckets: Record<string, Map<string, StoredObject>> = {};
   /** Make a query fail: `${table}.${op}` -> error message. */

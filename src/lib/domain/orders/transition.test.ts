@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/lib/errors";
 import type { Actor } from "./rules";
 import { ACTIVE_STATUSES, TERMINAL_STATUSES, TRANSITIONS } from "./rules";
-import { transition } from "./transition";
+import { finalizePayment, transition } from "./transition";
 
 // ---------------------------------------------------------------------------------------------
 // An in-memory stand-in for the Supabase client. It is NOT Postgres: it only imitates the few
@@ -38,6 +38,35 @@ class FakeDb {
   tables: Record<string, Row[]> = { orders: [], settlements: [], refunds: [] };
   failInsertInto: string | null = null;
   failUpdate = false;
+  // RPC response simulator only; actual SQL rollback/concurrency is tested separately in Postgres.
+  async rpc(_name: string, args: Record<string, unknown>) {
+    await Promise.resolve();
+    const order = this.tables.orders.find((row) => row.id === args.p_order_id)!;
+    if (!(args.p_from as string[]).includes(order.status as string))
+      return { data: null, error: { code: "PT409" } };
+    const table = args.p_to === "paid" ? "settlements" : "refunds";
+    if (this.failUpdate || this.failInsertInto === table)
+      return { data: null, error: { code: "23514", details: `pickup_code=${LEAKY_CODE}` } };
+    Object.assign(order, args.p_values);
+    this.tables[table].push(
+      table === "settlements"
+        ? {
+            id: `${table}-${this.tables[table].length + 1}`,
+            shop_id: order.shop_id,
+            order_id: order.id,
+            amount_satang: order.print_subtotal_satang,
+            status: "pending",
+          }
+        : {
+            id: `${table}-${this.tables[table].length + 1}`,
+            order_id: order.id,
+            amount_satang: args.p_refund_satang ?? order.total_satang,
+            reason: order.reject_reason,
+            status: "pending",
+          },
+    );
+    return { data: { order: { ...order }, changed: true }, error: null };
+  }
   from(name: string) {
     return new Query(this, name);
   }
@@ -820,7 +849,7 @@ describe("failures around the update", () => {
     expect(r.status).toBe("printing");
   });
 
-  it("a failing side effect is reported (not swallowed) and the status stays changed", async () => {
+  it("a failed financial write rolls back the state change and permits retry", async () => {
     const err = vi.spyOn(console, "error").mockImplementation(() => {});
     db.failInsertInto = "refunds";
     const o = seed({ status: "paid" });
@@ -832,9 +861,10 @@ describe("failures around the update", () => {
         actor: "shop",
         patch: { rejectReason: "เสีย" },
       }),
-    ).rejects.toThrow("insert into refunds failed");
-    expect(err).toHaveBeenCalled();
-    expect(stored(o).status).toBe("rejected");
+    ).rejects.toMatchObject({ code: "INTERNAL" });
+    expect(err).not.toHaveBeenCalled();
+    expect(stored(o).status).toBe("paid");
+    expect(db.tables.refunds).toHaveLength(0);
     expect(h.notify).not.toHaveBeenCalled();
   });
 });
@@ -862,16 +892,63 @@ describe("nothing else writes orders.status", () => {
     expect(offenders).toEqual([]);
   });
 
-  it("no SQL migration or function updates orders.status", () => {
+  it("only the internal financial RPC persists orders.status in SQL", () => {
     const offenders = sources("supabase", ["sql"]).filter((p) =>
       /update\s+(public\.)?orders\b[^;]{0,300}?\bstatus\s*=/i.test(readFileSync(p, "utf8")),
     );
-    expect(offenders).toEqual([]);
+    expect(offenders).toEqual(["supabase/migrations/20261112090000_atomic_order_finance.sql"]);
   });
 
   it("the table covers every open status", () => {
     for (const status of ACTIVE_STATUSES) {
       expect(TRANSITIONS.some((r) => r.from.includes(status))).toBe(true);
     }
+  });
+});
+
+describe("atomic finalizer adapter", () => {
+  it("passes payment context in one RPC and notifies only a changed result", async () => {
+    const o = seed({ status: "awaiting_payment" });
+    const rpc = vi.spyOn(db, "rpc");
+    await finalizePayment({
+      orderId: o.id as string,
+      paymentId: uid(),
+      slipRef: "FICTIONALREF",
+      verifiedBy: "slipok",
+    });
+    expect(rpc).toHaveBeenCalledOnce();
+    expect(rpc.mock.calls[0][1]).toMatchObject({
+      p_to: "paid",
+      p_actor: "system",
+      p_verifier: "slipok",
+      p_slip_ref: "FICTIONALREF",
+    });
+    expect(h.notify).toHaveBeenCalledOnce();
+  });
+  it("accepts a database-confirmed replay after the order advanced without notifying again", async () => {
+    const o = seed({ status: "printing", paid_at: NOW.toISOString() });
+    vi.spyOn(db, "rpc").mockResolvedValueOnce({ data: { order: o, changed: false }, error: null });
+    const result = await finalizePayment({
+      orderId: o.id as string,
+      paymentId: uid(),
+      verifiedBy: "admin",
+    });
+    expect(result.status).toBe("printing");
+    expect(h.notify).not.toHaveBeenCalled();
+  });
+  it("regenerates a pickup code after database arbitration rejects a concurrent collision", async () => {
+    const o = seed({ status: "awaiting_payment" });
+    const original = db.rpc.bind(db);
+    const rpc = vi.spyOn(db, "rpc").mockResolvedValueOnce({ data: null, error: { code: "PT410" } });
+    rpc.mockImplementationOnce(original);
+    await finalizePayment({
+      orderId: o.id as string,
+      paymentId: uid(),
+      slipRef: "FICTIONALREF",
+      verifiedBy: "slipok",
+    });
+    expect(rpc).toHaveBeenCalledTimes(2);
+    expect(db.tables.settlements).toHaveLength(1);
+    expect(h.notify).toHaveBeenCalledOnce();
   });
 });
