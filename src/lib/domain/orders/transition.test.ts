@@ -286,7 +286,8 @@ describe("every row of the CONTRACTS section 4 table", () => {
           patch:
             rule.to === "awaiting_payment"
               ? { readyInMinutes: 30 }
-              : rule.requiresReason
+              : rule.requiresReason ||
+                  (actor === "admin" && rule.to === "completed" && rule.fulfillment === "pickup")
                 ? { rejectReason: "เหตุผล" }
                 : undefined,
         });
@@ -950,5 +951,39 @@ describe("atomic finalizer adapter", () => {
     expect(rpc).toHaveBeenCalledTimes(2);
     expect(db.tables.settlements).toHaveLength(1);
     expect(h.notify).toHaveBeenCalledOnce();
+  });
+});
+
+describe("admin completion requires and preserves the reason", () => {
+  it("rejects missing reasons and delivery completion", async () => {
+    const o = seed({ status: "ready", fulfillment: "pickup" });
+    await expectApiError(
+      transition({ orderId: o.id as string, from: "ready", to: "completed", actor: "admin" }),
+      "VALIDATION_ERROR",
+      422,
+    );
+    const delivery = seed({ status: "ready", fulfillment: "delivery" });
+    await expectApiError(
+      transition({
+        orderId: delivery.id as string,
+        from: "ready",
+        to: "completed",
+        actor: "admin",
+        patch: { rejectReason: "ตัวอย่างสมมติ" },
+      }),
+      "ORDER_INVALID_TRANSITION",
+      409,
+    );
+  });
+  it("stores an admin completion reason", async () => {
+    const o = seed({ status: "ready", fulfillment: "pickup" });
+    await transition({
+      orderId: o.id as string,
+      from: "ready",
+      to: "completed",
+      actor: "admin",
+      patch: { rejectReason: "ตัวอย่างสมมติ" },
+    });
+    expect(stored(o).reject_reason).toBe("ตัวอย่างสมมติ");
   });
 });

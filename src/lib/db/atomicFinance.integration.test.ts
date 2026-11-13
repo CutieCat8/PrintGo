@@ -105,6 +105,7 @@ describe.skipIf(!container)("financial RPC on actual PostgreSQL", () => {
     // Real application migrations. Only Supabase-managed auth/storage tables above are stubs.
     sql(readFileSync("supabase/migrations/20261110100632_init_schema.sql", "utf8"));
     sql(readFileSync("supabase/migrations/20261112090000_atomic_order_finance.sql", "utf8"));
+    sql(readFileSync("supabase/migrations/20261113090000_admin_payment_review.sql", "utf8"));
   }, 30000);
   afterAll(() => {
     sql(`drop database if exists ${database} with (force);`, "postgres");
@@ -282,5 +283,75 @@ describe.skipIf(!container)("financial RPC on actual PostgreSQL", () => {
           .at(-1)!,
       ).changed,
     ).toBe(true);
+  });
+  it("expired-payment refunds are atomic and idempotent under concurrency", async () => {
+    const id = order("expired", true);
+    const pid = payment(id);
+    const statement = `select public.review_order_payment('${pid}','refund','ตัวอย่างสมมติ');`;
+    const results = await Promise.all([concurrent(statement), concurrent(statement)]);
+    expect(results.map((r) => JSON.parse(r).changed).sort()).toEqual([false, true]);
+    const saved = snapshot(id);
+    expect(saved.order.status).toBe("expired");
+    expect(saved.order.paid_at).toBeNull();
+    expect(saved.payments[0].status).toBe("verified");
+    expect(saved.refunds).toHaveLength(1);
+    expect(saved.refunds[0].amount_satang).toBe(12600);
+    expect(saved.settlements).toHaveLength(0);
+  });
+  it("failed expired refund rolls back its payment verification", () => {
+    const id = order("expired", true);
+    const pid = payment(id);
+    const before = snapshot(id);
+    failInsert("refunds");
+    try {
+      expect(() =>
+        sql(`select public.review_order_payment('${pid}','refund','ตัวอย่างสมมติ');`),
+      ).toThrow();
+    } finally {
+      allowInsert("refunds");
+    }
+    expect(snapshot(id)).toEqual(before);
+  });
+  it("reject versus approve has only one winner", async () => {
+    const id = order();
+    const pid = payment(id);
+    const results = await Promise.allSettled([
+      concurrent(rpc(id, pid, { actor: "admin", verifier: "admin", ref: null })),
+      concurrent(`select public.review_order_payment('${pid}','reject','ตัวอย่างสมมติ');`),
+    ]);
+    expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
+    const saved = snapshot(id);
+    expect(saved.payments[0].status).toBe(saved.order.status === "paid" ? "verified" : "rejected");
+    expect(saved.settlements).toHaveLength(saved.order.status === "paid" ? 1 : 0);
+  });
+  it("review refuses active refunds, mismatched amounts and overwriting rejection", () => {
+    const active = order();
+    const ap = payment(active);
+    expect(() =>
+      sql(`select public.review_order_payment('${ap}','refund','ตัวอย่างสมมติ');`),
+    ).toThrow();
+    const id = order("expired", true);
+    const pid = payment(id, 1);
+    expect(() =>
+      sql(`select public.review_order_payment('${pid}','refund','ตัวอย่างสมมติ');`),
+    ).toThrow();
+    sql(`select public.review_order_payment('${pid}','reject','ตัวอย่างสมมติ');`);
+    expect(() =>
+      sql(`select public.review_order_payment('${pid}','reject','เหตุผลใหม่');`),
+    ).toThrow();
+    expect(snapshot(id).refunds).toHaveLength(0);
+  });
+  it("review RPC is service-only", () => {
+    for (const role of ["anon", "authenticated"])
+      expect(
+        sql(
+          `select has_function_privilege('${role}','public.review_order_payment(uuid,text,text)','execute');`,
+        ),
+      ).toBe("f");
+    expect(
+      sql(
+        "select has_function_privilege('service_role','public.review_order_payment(uuid,text,text)','execute');",
+      ),
+    ).toBe("t");
   });
 });

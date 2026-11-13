@@ -8,6 +8,7 @@ import {
 } from "@/lib/db/types";
 import {
   presentCustomerOrderDetail,
+  presentAdminOrderDetail,
   presentOrder,
   presentShopOrderDetail,
   type DetailParts,
@@ -160,4 +161,29 @@ describe("the shop's view of an order (CLAUDE.md rule 10)", () => {
       }
     }
   });
+});
+
+it("admin detail retains manual estimates and service prices without exposing storage paths", () => {
+  const order = row({ status: "submitted", requires_manual_price: true });
+  const detail = parts();
+  detail.services = [
+    {
+      id: u(25),
+      createdAt: T,
+      orderId: order.id,
+      shopServiceId: null,
+      orderFileId: null,
+      name: "ตัวอย่างสมมติ",
+      unit: "per_order",
+      unitPriceSatang: 500,
+      quantity: 2,
+    },
+  ];
+  const admin = presentAdminOrderDetail(order, detail);
+  expect(admin.estimatedPrintSatang).toBe(1000);
+  expect(admin.services[0].unitPriceSatang).toBe(500);
+  expect(admin.services[0].lineTotalSatang).toBe(1000);
+  expect(admin.deliveryRecipientName).toBe(order.deliveryRecipientName);
+  expect(presentCustomerOrderDetail(order, detail).services[0].unitPriceSatang).toBeNull();
+  expect(JSON.stringify(admin)).not.toContain("secret/path");
 });
