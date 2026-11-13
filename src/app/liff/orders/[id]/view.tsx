@@ -191,6 +191,7 @@ function StatusHero({
   // A slip waiting for review counts as paid for the customer: no cancel (D19)
   const slipInReview = o.payment?.status === "pending_review";
   const canCancel = customerCanCancel(o.status) && !slipInReview;
+  const showPayment = paying || slipInReview || o.payment?.status === "rejected";
   const eta = etaText(o, now);
 
   async function cancel() {
@@ -301,10 +302,15 @@ function StatusHero({
           <Icon name="alert" className="mt-0.5 size-4 shrink-0" />
           ชำระเงินแล้วยกเลิกเองไม่ได้ หากต้องการเปลี่ยนแปลงให้คุยกับร้านก่อน
         </p>
-        {paying && o.totalSatang !== null ? (
-          <PaymentSection orderId={o.id} amountSatang={o.totalSatang} onPaid={refresh} />
+        {showPayment && o.totalSatang !== null ? (
+          <PaymentSection
+            orderId={o.id}
+            amountSatang={o.totalSatang}
+            deadline={o.paymentDeadline}
+            onPaid={refresh}
+          />
         ) : (
-          !slipInReview && (
+          !showPayment && (
             <div className="grid gap-2">
               <Button size="lg" fullWidth arrow onClick={() => setPaying(true)}>
                 ชำระเงิน {o.totalSatang !== null && <Money satang={o.totalSatang} />}
