@@ -13,7 +13,7 @@
 | A4 โอน/คืน | PR #23; dev UI/session/DB ผ่านกรณีโอน 120 บาท เหลือ 20 บาท และคืน 50 บาท; ล้าง fixture แล้ว | ทีมรีวิวและ merge หลัง A6; ตรวจซ้ำบนฐานรวม ใช้ O4 บันทึกโอนด้วยมือ ไม่มีบริการโอนอัตโนมัติ |
 | A5 อนุมัติร้าน | โค้ดอยู่ main; unit/HTTP guards ผ่าน | ทดสอบสมัครร้าน → ตั้งราคา → admin อนุมัติ → ลูกค้าเห็นร้าน → ระงับแล้วร้านหาย ด้วย Supabase/session จริง เอกสาร A5 เดิมที่บอกยังไม่มี env เป็นบริบทการทดสอบรอบเก่า |
 | A6 ตรวจสลิป/ออเดอร์ | PR #20; dev admin session/DB ผ่านอนุมัติ ปฏิเสธ คืนเงินหมดอายุ ยกเลิกคืนบางส่วน ปิดงานรับเอง; PostgreSQL tests ผ่าน | ซี/พลุรีวิวและ merge หลัง A3; ทดสอบลูกค้าได้รับ LINE จริง ปัจจุบัน notify ยังเป็น stub จึงยังไม่ผ่านเกณฑ์ข้อความถึงลูกค้าจริง |
-| A7 ขนส่ง/ยอด | มี implementation บน branch A7 พร้อม unit/HTTP guards และ PostgreSQL transaction tests ดู A7.md | ลง migration ใน dev และทดสอบ browser/session/seed จริงทั้ง flow; LINE ยังเป็น stub จึงยังไม่ผ่านครบเกณฑ์ |
+| A7 ขนส่ง/ยอด | PR #24 มี implementation, PostgreSQL tests และ migration ใน dev; ทดสอบหน้าจอด้วย admin session จริงจน completed และเทียบ overview กับ DB แล้ว ดู A7.md | LINE ยังเป็น stub; failed/rebook รอบ UI เป็นผลผู้ใช้รายงานร่วมกับสถานะปลายทาง ยังไม่พิสูจน์ failed ระหว่างทางด้วย DB; รอซี/พลุรีวิว |
 | A8 ตั้งค่าร้าน | โค้ดอยู่ main; ตรวจ 1024px และการบันทึกใน mock แล้ว | ทดสอบร้าน pending/active ด้วย Supabase/session จริง และลูกค้าอีก session เห็นราคา/บริการ/estimate เปลี่ยน รวม 422/network failure |
 
 PR เก่า #13/#15/#16/#17 ยังเปิดอยู่บางรายการแม้โค้ดหลายส่วนเข้า main แล้ว
@@ -25,7 +25,7 @@ PR เก่า #13/#15/#16/#17 ยังเปิดอยู่บางรา
 2. หลังรีวิว merge ทีละ PR ปรับฐาน PR ถัดไปเป็น main และตรวจ diff/CI ก่อน merge ทุกครั้ง
 3. ตรวจ migration ที่ target dev มีอยู่จริงก่อนใช้โค้ด A6 ไม่ db push แบบเดาประวัติ และไม่แก้ production จากรายการนี้
 4. นำ A7 ให้ซี/พลุรีวิวส่วนกลางและ migration แล้วทดสอบ dev พร้อมทำ A5/A8 live integration ที่ยังขาด
-   A7 ขยาย manual applyDeliveryUpdate ให้เรียกขอบเขต transition และ RPC atomic แล้วตามอนุมัติผู้ใช้ ยังไม่ได้ลง migration ใหม่ใน Supabase
+   A7 ขยาย manual applyDeliveryUpdate ให้เรียกขอบเขต transition และ RPC atomic แล้วตามอนุมัติผู้ใช้ ลง migration ใน PrintGo-dev และล้าง fixture หลังตรวจแล้ว ไม่เปลี่ยน production
 5. ทดสอบรวมด้านล่างบน dev และบันทึกผลจริงก่อนปิดเกณฑ์ทั้งหมด
 
 ## รายการทดสอบรวมหลัง merge
