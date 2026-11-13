@@ -61,12 +61,21 @@ manual payment preview 1 ข้อถูกข้าม; lint/typecheck แล�
 development identity ของร้านเข้า `/admin/shops` -> 404 และ anonymous API -> 401
 ไม่ได้ทดสอบหน้าจอแอดมินที่ล็อกอินจริงใน browser
 
-เครื่องนี้ยังไม่มี NEXT_PUBLIC_SUPABASE_URL และ SUPABASE_SERVICE_ROLE_KEY
-จึงยังไม่ได้ทดสอบ magic link/admin session จริงหรือวงจรสมัครร้าน -> อนุมัติ -> ค้นหาร้านบน DB จริง
-ก่อนเดโมให้ซีเตรียม Supabase dev และบัญชี admin (ใช้ make-admin ที่มีอยู่) แล้วทดสอบวงจรนี้
-ไม่เพิ่มสคริปต์ create-shop นอกโฟลเดอร์ในงาน A5
+ข้อจำกัดเรื่องยังไม่มี Supabase env เป็นบริบทของรอบพัฒนาเดิม ผล session/DB จริงเพิ่มเติมอยู่ด้านล่าง
 
 ใช้การตั้งค่าที่ตัดสินแล้ว D23; ไม่มี default ใหม่จาก DECISIONS
 ไฟล์ A5 อยู่เฉพาะ src/app/admin และ src/app/api/admin/shops ไม่มี dependency ใหม่
 branch นี้เริ่มจาก A3 เพื่อใช้ UI/domain ที่นำ PR #12 มารวมทดสอบแล้ว
 ไม่ได้ merge A3 หรือ PR ของเพื่อนเข้า main
+
+## ผล PrintGo-dev เพิ่มเติม — 14 พ.ย. 2026
+
+- ใช้บัญชีร้านและ admin สมมติชั่วคราวกับ Supabase passwordless session/cookie จริง ไม่ใช้ x-dev-user สำหรับร้าน/admin; ไม่ได้ทดสอบการส่งอีเมลและเปิด magic link จาก inbox
+- ร้านสมัครผ่าน POST /api/shop/register ได้ pending และส่งซ้ำได้ 409; pending ตั้งโปรไฟล์/เวลา/ราคา/บริการได้ แต่เรียก orders ได้ 403 และลูกค้ายังไม่เห็นร้าน
+- GET admin shops พบ pending พร้อม hasHours/hasPricing ถูกต้อง อนุมัติผ่าน HTTP ด้วย cookie admin แล้วลูกค้าเห็นร้านและราคา
+- ราคาเปลี่ยน 200 → 300 สตางค์แล้ว customer list/estimate เปลี่ยนตาม; จากนั้นผู้ใช้บันทึก 3.50 บาทผ่านหน้าราคาและรีโหลด ตรวจ API อีกครั้งได้ 350 สตางค์ทั้งร้าน/ลูกค้า งาน 10 หน้าเป็น 3500 + ค่าบริการขั้นต่ำ 300 = 3800 สตางค์
+- ระงับผ่าน admin HTTP แล้วร้านหายจากรายการลูกค้า และ cookie ร้านเรียก settings ได้ 403
+- ตรวจจริง anonymous shop profile ได้ 401, cookie ร้านเรียก admin shops ได้ 403, cookie admin เรียก shop profile ได้ 403
+- ฝั่งลูกค้าในรอบนี้ใช้ development identity แยกจาก cookie ร้าน/admin จึงไม่ใช่ LIFF login จริง
+- 15 กลุ่มตรวจ API ข้าม session ผ่านร่วมกับ A8 ไม่มีการแก้โค้ดแอปในรอบนี้ การอนุมัติ/ระงับ A5 ตรวจผ่าน HTTP ไม่ใช่การกดปุ่มหน้าจอ A5
+- ล้างร้าน/ลูกค้า ชั่วโมง 7 แถว ราคา 1 แถว บริการคงเหลือ 2 แถว และ auth users/profiles ชั่วคราว 2 บัญชีแล้ว ตรวจว่าไม่เหลือข้อมูล fixture และหยุดตัวช่วย session แล้ว
