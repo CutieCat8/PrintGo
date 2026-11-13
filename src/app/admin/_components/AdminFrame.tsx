@@ -11,6 +11,7 @@ const menu = [
   { href: "/admin/shops", label: "ร้าน", ready: true },
   { href: "/admin/payments", label: "การชำระเงินรอตรวจ", ready: true },
   { href: "/admin/orders", label: "ออเดอร์", ready: true },
+  { href: "/admin/deliveries", label: "จัดส่งด้วยมือ", ready: true },
   { href: "/admin/settlements", label: "โอนให้ร้าน", ready: true },
   { href: "/admin/refunds", label: "คืนเงิน", ready: true },
 ];
