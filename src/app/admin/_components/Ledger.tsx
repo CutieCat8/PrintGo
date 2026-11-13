@@ -169,7 +169,7 @@ export function Ledger({ kind }: { kind: "settlements" | "refunds" }) {
             <Button variant="secondary" disabled={busy} onClick={() => setSelection(null)}>
               กลับ
             </Button>
-            <Button loading={busy} disabled={busy} onClick={() => void confirm()}>
+            <Button variant="secondary" loading={busy} disabled={busy} onClick={() => void confirm()}>
               ยืนยันบันทึก
             </Button>
           </>
