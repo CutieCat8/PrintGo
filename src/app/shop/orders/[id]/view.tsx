@@ -7,12 +7,12 @@ import {
   Button,
   Card,
   ErrorState,
-  Input,
   Modal,
   Money,
   SkeletonCard,
   StatusBadge,
   Textarea,
+  Icon,
   cx,
   useToast,
 } from "@/components/ui";
@@ -27,6 +27,7 @@ import {
 } from "@/lib/client/format";
 import { isTerminal, useNow, useOrder } from "@/lib/client/hooks";
 import type { ConfirmOrderBody, Order, OrderDetail } from "@/lib/db/types";
+import { CodeBoxes } from "../../_components/CodeBoxes";
 import { ConfirmPanel, EtaPicker, type EtaValue } from "./ConfirmPanel";
 
 const REJECT_REASONS = [
@@ -42,16 +43,23 @@ const QUICK_REPLIES = [
   "งานนี้วันนี้ยังไม่เสร็จ จะเสร็จ…",
 ];
 
+/** Full page (tablet / direct link). On wide screens the queue shows the same detail inline. */
 export function ShopOrderPage() {
   const { id } = useParams<{ id: string }>();
+  return (
+    <div className="mx-auto flex max-w-7xl flex-col gap-4">
+      <ShopOrderDetail id={id} />
+    </div>
+  );
+}
+
+/** One order with every shop action and the chat. `embedded` = inside the queue's right panel. */
+export function ShopOrderDetail({ id, embedded = false }: { id: string; embedded?: boolean }) {
   const order = useOrder(id, "shop");
   const o = order.data;
 
   return (
-    <div className="mx-auto flex max-w-6xl flex-col gap-4">
-      <Link href="/shop" className="text-sm text-brand underline">
-        ‹ กลับไปคิวงาน
-      </Link>
+    <div className="flex flex-col gap-4">
       {order.isLoading ? (
         <div className="grid gap-4 lg:grid-cols-2">
           <SkeletonCard />
@@ -66,13 +74,21 @@ export function ShopOrderPage() {
           onRetry={() => order.mutate()}
         />
       ) : o ? (
-        <OrderView order={o} refresh={() => order.mutate()} />
+        <OrderView order={o} refresh={() => order.mutate()} embedded={embedded} />
       ) : null}
     </div>
   );
 }
 
-function OrderView({ order: o, refresh }: { order: OrderDetail; refresh: () => Promise<unknown> }) {
+function OrderView({
+  order: o,
+  refresh,
+  embedded,
+}: {
+  order: OrderDetail;
+  refresh: () => Promise<unknown>;
+  embedded: boolean;
+}) {
   const toast = useToast();
   const now = useNow();
   const [busy, setBusy] = useState(false);
@@ -105,31 +121,75 @@ function OrderView({ order: o, refresh }: { order: OrderDetail; refresh: () => P
   }
 
   const eta = etaText(o, now);
+  const responseLeft = o.responseDeadline
+    ? new Date(o.responseDeadline).getTime() - now.getTime()
+    : null;
 
   return (
     <>
-      <Card>
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-bold text-brand">{o.orderNo}</h1>
-            <p className="text-sm text-ink-muted">
-              สั่งเมื่อ {formatDayTime(o.createdAt, now)} ·{" "}
-              {o.fulfillment === "pickup" ? "ลูกค้ารับเองที่ร้าน" : "ส่งถึงที่ (ไรเดอร์)"}
-            </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <div className="flex flex-wrap items-center gap-3">
+            <Link
+              href="/shop"
+              className="inline-flex items-center gap-1 text-sm font-medium text-ink-muted hover:text-ink"
+            >
+              <Icon name="back" className="size-4" />
+              กลับ
+            </Link>
+            <h1 className="font-display text-[1.9rem] leading-tight font-bold tracking-tight italic">
+              {o.orderNo}
+            </h1>
+            <StatusBadge status={o.status} fulfillment={o.fulfillment} />
+            {o.status === "submitted" && responseLeft !== null && (
+              <span
+                className={cx(
+                  "rounded-full px-3 py-1 text-sm font-semibold text-white tabular-nums",
+                  responseLeft < 3 * 60_000 ? "bg-danger" : "bg-zoom",
+                )}
+              >
+                {responseLeft > 0 ? `ตอบภายใน ${formatCountdown(responseLeft)}` : "เลยเวลาตอบ"}
+              </span>
+            )}
           </div>
-          <StatusBadge status={o.status} fulfillment={o.fulfillment} className="text-base" />
+          <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-ink-muted">
+            <span>สั่งเมื่อ {formatDayTime(o.createdAt, now)}</span>
+            <span className="inline-flex items-center gap-1">
+              <Icon name={o.fulfillment === "pickup" ? "store" : "truck"} className="size-4" />
+              {o.fulfillment === "pickup" ? "ลูกค้ารับเองที่ร้าน" : "ส่งถึงที่ (ไรเดอร์)"}
+            </span>
+          </p>
         </div>
         {eta && !isTerminal(o.status) && (
-          <p className="mt-3 inline-block rounded-control bg-brand-50 px-3 py-2 font-semibold text-brand">
-            ⏱ {eta}
-            {o.readyNote && <span className="ml-2 font-normal">({o.readyNote})</span>}
+          <p className="inline-flex items-center gap-2 rounded-full bg-brand-50 px-3.5 py-1.5 text-sm font-semibold text-brand">
+            <Icon name="clock" className="size-4" />
+            {eta}
+            {o.readyNote && <span className="font-normal">({o.readyNote})</span>}
           </p>
         )}
-        {o.rejectReason && <p className="mt-2 text-sm">เหตุผลที่ปฏิเสธ/ยกเลิก: {o.rejectReason}</p>}
-      </Card>
+      </div>
+      {o.rejectReason && (
+        <p className="rounded-control bg-danger-50 px-4 py-2 text-sm text-danger">
+          เหตุผลที่ปฏิเสธ/ยกเลิก: {o.rejectReason}
+        </p>
+      )}
 
-      <div className="grid items-start gap-4 lg:grid-cols-[1fr_minmax(320px,420px)]">
+      <div
+        className={cx(
+          "grid items-start gap-4",
+          embedded
+            ? "2xl:grid-cols-[1fr_minmax(320px,400px)]"
+            : "lg:grid-cols-[1fr_minmax(320px,420px)]",
+        )}
+      >
+        {/* Left (S4/S5): what to print and what to do next */}
         <div className="flex flex-col gap-4">
+          <FilesCard order={o} />
+          <NextStep order={o} busy={busy} act={act} onReject={() => setRejecting(true)} now={now} />
+          {o.status !== "submitted" && <PriceCard order={o} />}
+        </div>
+        {/* Right: price + ready time while new (S4), then the chat (S5) */}
+        <div className={cx("flex flex-col gap-4", embedded ? "" : "lg:sticky lg:top-24")}>
           {o.status === "submitted" && (
             <ConfirmPanel
               order={o}
@@ -141,17 +201,13 @@ function OrderView({ order: o, refresh }: { order: OrderDetail; refresh: () => P
               }
             />
           )}
-          <NextStep order={o} busy={busy} act={act} onReject={() => setRejecting(true)} now={now} />
-          <FilesCard order={o} />
-          <PriceCard order={o} />
+          <ChatRoom
+            orderId={o.id}
+            side="shop"
+            closed={isTerminal(o.status)}
+            quickReplies={QUICK_REPLIES}
+          />
         </div>
-        <ChatRoom
-          orderId={o.id}
-          side="shop"
-          closed={isTerminal(o.status)}
-          quickReplies={QUICK_REPLIES}
-          className="lg:sticky lg:top-24"
-        />
       </div>
 
       <RejectModal
@@ -285,22 +341,23 @@ function NextStep({
             if (valid) setConfirmHandover(true);
           }}
         >
-          <Input
-            label="รหัสรับงาน"
-            inputMode="numeric"
-            pattern="\d{4}"
-            maxLength={4}
-            autoComplete="off"
-            className="w-40"
-            value={code}
-            error={codeError ?? undefined}
-            onChange={(e) => {
-              setCode(e.target.value.replace(/\D/g, "").slice(0, 4));
-              setCodeError(null);
-            }}
-          />
+          <div>
+            <CodeBoxes
+              value={code}
+              invalid={Boolean(codeError)}
+              onChange={(c) => {
+                setCode(c);
+                setCodeError(null);
+              }}
+            />
+            {codeError && (
+              <p role="alert" className="mt-1.5 text-sm font-medium text-danger">
+                {codeError}
+              </p>
+            )}
+          </div>
           <Button type="submit" size="lg" disabled={!valid || busy}>
-            ส่งมอบแล้ว
+            ยืนยันรับงาน
           </Button>
         </form>
         <Modal
@@ -384,7 +441,7 @@ function FilesCard({ order: o }: { order: OrderDetail }) {
 
   return (
     <Card>
-      <h2 className="text-lg font-semibold text-brand">ไฟล์ ({o.files.length})</h2>
+      <h2 className="text-base font-semibold text-ink">ไฟล์ ({o.files.length})</h2>
       <ul className="mt-2 flex flex-col divide-y divide-line">
         {o.files.map((f, i) => {
           const services = o.services.filter((s) => s.fileId === f.id);
@@ -483,7 +540,7 @@ function PriceCard({ order: o }: { order: OrderDetail }) {
 
   return (
     <Card>
-      <h2 className="text-lg font-semibold text-brand">ราคา</h2>
+      <h2 className="text-base font-semibold text-ink">ราคา</h2>
       <dl className="mt-2 flex flex-col gap-1.5">
         {rows.map((r) => (
           <div

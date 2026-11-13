@@ -24,7 +24,7 @@ export function ToggleChip({
         "inline-flex min-h-10 items-center gap-1.5 rounded-full px-3.5 text-sm font-medium ring-1 transition",
         pressed
           ? "bg-brand text-white ring-brand"
-          : "bg-surface text-brand ring-line hover:bg-brand-50",
+          : "bg-surface text-ink ring-line-strong hover:bg-canvas",
         className,
       )}
     >

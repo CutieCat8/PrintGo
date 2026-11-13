@@ -6,7 +6,7 @@ type CardProps = HTMLAttributes<HTMLElement> & {
   padding?: "none" | "sm" | "md" | "lg";
 };
 
-const PADDING = { none: "", sm: "p-3", md: "p-4", lg: "p-6" };
+const PADDING = { none: "", sm: "p-3", md: "p-5", lg: "p-6" };
 
 export function Card({ as: Tag = "div", padding = "md", className, ...rest }: CardProps) {
   return (
@@ -33,7 +33,7 @@ export function CardHeader({
 }) {
   return (
     <div className={cx("mb-3 flex items-center justify-between gap-3", className)}>
-      <h2 className="text-lg font-semibold text-brand">{title}</h2>
+      <h2 className="text-base font-semibold text-ink">{title}</h2>
       {actions}
     </div>
   );
