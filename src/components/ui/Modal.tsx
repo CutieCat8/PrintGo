@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, type ReactNode } from "react";
 import { cx } from "./cx";
+import { Icon } from "./Icon";
 
 export type ModalProps = {
   open: boolean;
@@ -85,7 +86,7 @@ export function Modal({
               aria-label="ปิด"
               className="-mt-1 -mr-2 flex size-11 shrink-0 items-center justify-center rounded-full text-xl text-ink-muted hover:bg-canvas"
             >
-              ✕
+              <Icon name="x" className="size-5" />
             </button>
           )}
         </div>

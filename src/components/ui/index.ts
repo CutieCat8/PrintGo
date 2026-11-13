@@ -25,3 +25,5 @@ export { NumberStepper } from "./NumberStepper";
 export { Segmented, type SegmentOption } from "./Segmented";
 export { Steps } from "./Steps";
 export { ToggleChip } from "./ToggleChip";
+export { Icon, type IconName } from "./Icon";
+export { Logo, LogoMark } from "./Logo";

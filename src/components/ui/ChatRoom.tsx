@@ -127,7 +127,7 @@ export function ChatRoom({ orderId, side, closed, quickReplies, className }: Cha
         className,
       )}
     >
-      <h2 className="border-b border-line px-4 py-3 font-semibold text-brand">
+      <h2 className="border-b border-line px-4 py-3 font-semibold text-ink">
         {side === "customer" ? "คุยกับร้าน" : "คุยกับลูกค้า"}
       </h2>
 

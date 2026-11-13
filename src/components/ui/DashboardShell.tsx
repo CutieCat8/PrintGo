@@ -4,17 +4,23 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { cx } from "./cx";
+import { Icon, type IconName } from "./Icon";
+import { LogoMark } from "./Logo";
 
-type NavItem = { href: string; label: string; icon: string; badge?: number };
+type NavItem = { href: string; label: string; icon: IconName; badge?: number };
 
 type DashboardShellProps = {
   shopName: string;
-  /** Right side of the top bar, e.g. the "พักรับงาน" switch (Y6). */
+  /** Right side of the top bar, e.g. the "รับงานอยู่" switch. */
   headerActions?: ReactNode;
-  /** Full-width notice under the top bar, e.g. "รอแอดมินอนุมัติ" (Y6). */
+  /** Full-width notice under the top bar, e.g. "รอแอดมินอนุมัติ". */
   banner?: ReactNode;
-  /** Unread/new count on the "คิวงาน" menu item. Hidden when 0. */
+  /** New orders + unread on "ออเดอร์". Hidden when 0. */
   queueBadge?: number;
+  /** Unread messages on "แชท". Hidden when 0. */
+  chatBadge?: number;
+  /** Let the page use the full height without padding (chat inbox). */
+  flush?: boolean;
   children: ReactNode;
 };
 
@@ -23,80 +29,40 @@ function isActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-function CountBadge({ count }: { count?: number }) {
-  if (!count) return null;
-  return (
-    <span className="ml-auto min-w-6 rounded-full bg-danger px-1.5 text-center text-sm font-bold text-white tabular-nums">
-      {count > 9 ? "9+" : count}
-      <span className="sr-only"> รายการใหม่</span>
-    </span>
-  );
-}
-
-/** Shop dashboard frame: side menu (desktop) / top tabs (tablet), top bar with shop name and logout. */
+/**
+ * Shop dashboard frame (Figma S3): one top bar with the shop name, pill menu
+ * ออเดอร์ / แชท / ตั้งค่า, and the "รับงานอยู่" switch. Desktop/tablet first.
+ */
 export function DashboardShell({
   shopName,
   headerActions,
   banner,
   queueBadge,
+  chatBadge,
+  flush,
   children,
 }: DashboardShellProps) {
   const pathname = usePathname() ?? "";
   const items: NavItem[] = [
-    { href: "/shop", label: "คิวงาน", icon: "🗂️", badge: queueBadge },
-    { href: "/shop/settings", label: "ตั้งค่า", icon: "⚙️" },
+    { href: "/shop", label: "ออเดอร์", icon: "inbox", badge: queueBadge },
+    { href: "/shop/chats", label: "แชท", icon: "chat", badge: chatBadge },
+    { href: "/shop/settings", label: "ตั้งค่า", icon: "settings" },
   ];
 
-  const logout = (
-    <form action="/auth/signout" method="post">
-      <button
-        type="submit"
-        className="min-h-11 rounded-control px-3 font-medium text-ink-muted hover:bg-canvas hover:text-ink"
-      >
-        ออกจากระบบ
-      </button>
-    </form>
-  );
-
   return (
-    <div className="flex min-h-dvh bg-canvas">
-      {/* Side menu: 1024px and up */}
-      <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col bg-brand text-white lg:flex">
-        <div className="px-5 py-5 text-xl font-bold">
-          Print<span className="text-accent">Go</span>
-          <span className="block text-sm font-normal text-brand-100">สำหรับร้าน</span>
-        </div>
-        <nav aria-label="เมนูร้าน" className="flex flex-col gap-1 px-3">
-          {items.map((item) => {
-            const active = isActive(pathname, item.href);
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                aria-current={active ? "page" : undefined}
-                className={cx(
-                  "flex min-h-12 items-center gap-3 rounded-control px-3 text-lg font-medium",
-                  active ? "bg-white text-brand" : "text-white hover:bg-brand-700",
-                )}
-              >
-                <span aria-hidden="true">{item.icon}</span>
-                {item.label}
-                <CountBadge count={item.badge} />
-              </Link>
-            );
-          })}
-        </nav>
-      </aside>
-
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 border-b border-line bg-surface">
-          <div className="flex min-h-16 items-center gap-3 px-4 lg:px-6">
-            <h1 className="min-w-0 flex-1 truncate text-xl font-semibold text-brand">{shopName}</h1>
-            {headerActions}
-            {logout}
-          </div>
-          {/* Top tabs: below 1024px */}
-          <nav aria-label="เมนูร้าน" className="flex gap-1 px-2 pb-2 lg:hidden">
+    <div className="flex min-h-dvh flex-col bg-canvas">
+      <header className="sticky top-0 z-30 bg-race text-white shadow-raised">
+        <div className="flex min-h-16 flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2 lg:px-6">
+          <Link href="/shop" className="flex min-w-0 items-center gap-2.5">
+            <LogoMark className="size-8 shrink-0 rounded-[9px] ring-1 ring-white/30" />
+            <span className="min-w-0 truncate font-display text-lg font-bold italic">
+              PrintGo <span className="text-accent">·</span> {shopName}
+            </span>
+          </Link>
+          <nav
+            aria-label="เมนูร้าน"
+            className="order-3 flex w-full gap-1.5 md:order-none md:w-auto"
+          >
             {items.map((item) => {
               const active = isActive(pathname, item.href);
               return (
@@ -105,20 +71,47 @@ export function DashboardShell({
                   href={item.href}
                   aria-current={active ? "page" : undefined}
                   className={cx(
-                    "flex min-h-11 items-center gap-2 rounded-control px-4 font-medium",
-                    active ? "bg-brand text-white" : "text-brand hover:bg-brand-50",
+                    "flex min-h-9 items-center gap-1.5 rounded-full px-3.5 text-sm font-semibold transition",
+                    active
+                      ? "bg-white text-brand"
+                      : "text-white/85 ring-1 ring-white/25 hover:bg-white/10",
                   )}
                 >
+                  <Icon name={item.icon} className="size-4" />
                   {item.label}
-                  <CountBadge count={item.badge} />
+                  {item.badge ? (
+                    <span
+                      className={cx(
+                        "min-w-5 rounded-full px-1.5 text-center text-xs leading-5 font-bold tabular-nums",
+                        active ? "bg-accent-ink text-white" : "bg-accent text-white",
+                      )}
+                    >
+                      {item.badge > 9 ? "9+" : item.badge}
+                      <span className="sr-only"> รายการใหม่</span>
+                    </span>
+                  ) : null}
                 </Link>
               );
             })}
           </nav>
-        </header>
-        {banner}
-        <main className="flex-1 p-4 lg:p-6">{children}</main>
-      </div>
+          <span className="flex-1" />
+          <div className="flex items-center gap-2">
+            {headerActions}
+            <form action="/auth/signout" method="post">
+              <button
+                type="submit"
+                aria-label="ออกจากระบบ"
+                title="ออกจากระบบ"
+                className="flex size-9 items-center justify-center rounded-full text-white/80 hover:bg-white/10 hover:text-white"
+              >
+                <Icon name="logout" className="size-5" />
+              </button>
+            </form>
+          </div>
+        </div>
+      </header>
+      {banner}
+      <main className={cx("flex-1", flush ? "" : "p-4 lg:p-6")}>{children}</main>
     </div>
   );
 }

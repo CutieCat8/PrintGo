@@ -7,159 +7,116 @@ import useSWR from "swr";
 import {
   Button,
   Card,
-  Checkbox,
-  ChoiceGroup,
-  EmptyState,
   ErrorState,
-  Input,
+  Icon,
   Money,
   PageShell,
-  Radio,
   Skeleton,
   Textarea,
   buttonClasses,
+  cx,
   useToast,
-  Steps,
 } from "@/components/ui";
 import { api, errorMessage, isApiClientError } from "@/lib/client/api";
 import {
   clearDraft,
-  filesReady,
   toCreateOrderRequest,
   toEstimateRequest,
   updateDraft,
-  useDraft,
-  type OrderDraft,
 } from "@/lib/client/draft";
-import { UNIT_LABEL, fileSettingsText, isThaiPhone } from "@/lib/client/format";
-import { useShops } from "@/lib/client/hooks";
+import { COLOR_LABEL, SIDES_LABEL, isThaiPhone } from "@/lib/client/format";
 import { describeOrderProblem, type OrderProblem } from "@/lib/client/orders";
-import { positionOf, requestLocation, useLocation } from "@/lib/client/location";
-import type { EstimateResult, ShopListItem } from "@/lib/client/types";
-import { EXTRA_LABEL, shopExtras, wantedExtras } from "@/lib/client/extras";
-import { ORDER_STEPS } from "../../_components/steps";
+import type { EstimateResult } from "@/lib/client/types";
+import {
+  ChosenShopGate,
+  markOrderSent,
+  useChosenShop,
+  useFlowGuard,
+} from "../../_components/OrderFlow";
 
+/** C8: check everything, see the estimate, send to the shop. */
 export default function SummaryPage() {
   const router = useRouter();
   const toast = useToast();
-  const { draft, hydrated } = useDraft();
-  const location = useLocation();
-  const pos = positionOf(location);
-  // "asking" again (re-request from this page) must not bounce the customer back to the shop list
-  const asked = location.kind !== "idle";
-  const shops = useShops(asked ? pos : null);
-  const shop = shops.data?.find((s) => s.id === draft.shopId) ?? null;
+  const { draft, hydrated } = useFlowGuard("shop");
+  const chosen = useChosenShop(draft.shopId);
+  const { shop, pos, mutate: refreshShops } = chosen;
   const [sending, setSending] = useState(false);
   const sentRef = useRef(false);
 
+  const delivery = draft.fulfillment === "delivery" && Boolean(shop?.acceptsDelivery && pos);
+  const effective = {
+    ...draft,
+    fulfillment: delivery ? ("delivery" as const) : ("pickup" as const),
+  };
+  const deliveryIncomplete =
+    delivery &&
+    (!draft.delivery.address.trim() ||
+      !draft.delivery.name.trim() ||
+      !isThaiPhone(draft.delivery.phone));
+  // Delivery was chosen but the location is gone (LIFF reloaded: it is kept in memory only).
+  // Never turn it into pickup silently: send the customer back to step 5 to allow it again.
+  const lostLocation = draft.fulfillment === "delivery" && Boolean(shop?.acceptsDelivery) && !pos;
+
   useEffect(() => {
-    // After a successful send the draft is cleared on purpose: do not bounce back to the form
-    if (!hydrated || sentRef.current) return;
-    if (!filesReady(draft)) router.replace("/liff/new");
-    else if (!draft.shopId || !asked) router.replace("/liff/new/shop");
-  }, [hydrated, draft, asked, router]);
+    if (hydrated && !sentRef.current && (deliveryIncomplete || lostLocation)) {
+      router.replace("/liff/new/delivery");
+    }
+  }, [hydrated, deliveryIncomplete, lostLocation, router]);
 
-  const canDeliver = Boolean(shop?.acceptsDelivery && pos);
-  const fulfillment = draft.fulfillment === "delivery" && canDeliver ? "delivery" : "pickup";
-  const effective: OrderDraft = { ...draft, fulfillment };
-
-  const estimateBody = shop ? toEstimateRequest(effective, shop.id, pos) : null;
+  const body = shop ? toEstimateRequest(effective, shop.id, pos) : null;
   const estimate = useSWR(
-    estimateBody ? ["estimate", JSON.stringify(estimateBody)] : null,
-    () => api.estimate(estimateBody!),
-    // A 4xx (e.g. the shop cannot print a file) will not fix itself: no background retries
-    { shouldRetryOnError: (e) => !(isApiClientError(e) && e.status < 500) },
+    body ? ["estimate", JSON.stringify(body)] : null,
+    () => api.estimate(body!),
+    {
+      shouldRetryOnError: (e) => !(isApiClientError(e) && e.status < 500),
+    },
   );
 
-  const deliveryErrors = {
-    name: draft.delivery.name.trim() ? undefined : "กรอกชื่อผู้รับ",
-    phone: isThaiPhone(draft.delivery.phone) ? undefined : "เบอร์โทร 9–10 หลัก ขึ้นต้นด้วย 0",
-    address: draft.delivery.address.trim() ? undefined : "กรอกที่อยู่และรายละเอียดจุดส่ง",
-  };
-  const deliveryOk =
-    fulfillment === "pickup" || Object.values(deliveryErrors).every((e) => e === undefined);
-  const [showErrors, setShowErrors] = useState(false);
+  const fileNames = draft.files.map((f) => f.name);
+  const problemOf = (e: unknown): OrderProblem =>
+    isApiClientError(e)
+      ? describeOrderProblem(e, fileNames)
+      : { message: errorMessage(e), pickAnotherShop: false, fileIndex: null };
+
+  function pickAnotherShop() {
+    updateDraft((d) => ({ ...d, shopId: null, services: [] }));
+    refreshShops();
+    router.push("/liff/new/shop");
+  }
 
   async function submit() {
     if (!shop || sentRef.current) return;
-    if (!deliveryOk) {
-      setShowErrors(true);
-      return;
-    }
     sentRef.current = true; // a double tap must create one order only
     setSending(true);
     try {
       const order = await api.createOrder(toCreateOrderRequest(effective, shop.id, pos));
+      markOrderSent(); // the guard must not send us back to step 1 once the draft is cleared
       clearDraft();
       router.replace(`/liff/orders/${order.id}`);
     } catch (e) {
       sentRef.current = false;
       setSending(false);
-      if (isApiClientError(e) && (e.code === "SHOP_CLOSED" || e.code === "SHOP_PAUSED")) {
-        toast(errorMessage(e), "error");
-        updateDraft((d) => ({ ...d, shopId: null, services: [] }));
-        shops.mutate();
-        router.replace("/liff/new/shop");
-        return;
-      }
       toast(problemOf(e).message, "error");
+      if (isApiClientError(e) && (e.code === "SHOP_CLOSED" || e.code === "SHOP_PAUSED")) {
+        pickAnotherShop();
+      }
     }
   }
 
-  const fileNames = draft.files.map((f) => f.name);
-  function problemOf(e: unknown): OrderProblem {
-    return isApiClientError(e)
-      ? describeOrderProblem(e, fileNames)
-      : { message: errorMessage(e), pickAnotherShop: false, fileIndex: null };
-  }
-
-  function pickAnotherShop() {
-    updateDraft((d) => ({ ...d, shopId: null, services: [] }));
-    shops.mutate();
-    router.push("/liff/new/shop");
-  }
-
-  if (!hydrated || !asked || shops.isLoading) {
-    return (
-      <PageShell title="สรุปออเดอร์" backHref="/liff/new/shop">
-        <Skeleton className="h-40" />
-      </PageShell>
-    );
-  }
-
-  if (shops.error) {
-    return (
-      <PageShell title="สรุปออเดอร์" backHref="/liff/new/shop">
-        <ErrorState description={errorMessage(shops.error)} onRetry={() => shops.mutate()} />
-      </PageShell>
-    );
-  }
-
-  if (!shop) {
-    return (
-      <PageShell title="สรุปออเดอร์" backHref="/liff/new/shop">
-        <EmptyState
-          icon="🏪"
-          title="ไม่พบร้านที่เลือก"
-          description="ร้านอาจปิดรับงานแล้ว กรุณาเลือกร้านใหม่"
-          action={
-            <Link href="/liff/new/shop" className={buttonClasses({})}>
-              เลือกร้านใหม่
-            </Link>
-          }
-        />
-      </PageShell>
-    );
-  }
+  const services = (shop?.services ?? []).filter((s) =>
+    draft.services.some((x) => x.serviceId === s.id),
+  );
 
   return (
     <PageShell
       title="สรุปออเดอร์"
-      backHref="/liff/new/shop"
+      backHref="/liff/new/delivery"
       footer={
         <Button
           fullWidth
           size="lg"
+          arrow
           loading={sending}
           disabled={sending || !estimate.data}
           onClick={submit}
@@ -168,240 +125,97 @@ export default function SummaryPage() {
         </Button>
       }
     >
-      <div className="flex flex-col gap-4">
-        <Steps steps={ORDER_STEPS} current={2} />
-        <Card>
-          <div className="flex items-start justify-between gap-2">
-            <div className="min-w-0">
-              <p className="text-sm text-ink-muted">ร้าน</p>
-              <p className="font-semibold text-brand">{shop.name}</p>
-              <p className="text-sm text-ink-muted">{shop.address}</p>
+      <ChosenShopGate hydrated={hydrated} chosen={chosen}>
+        {(shop) => (
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center gap-3 rounded-card bg-race p-4 text-white">
+              <span className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-white/15">
+                <Icon name="store" className="size-6" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-display text-lg font-bold italic">{shop.name}</p>
+                <p className="flex items-center gap-1 text-sm text-white/75">
+                  <Icon name={delivery ? "truck" : "store"} className="size-4" />
+                  {delivery ? "ส่งถึงที่ · ค่าส่งประมาณ" : "รับเองที่ร้าน"}
+                </p>
+              </div>
+              <Link
+                href="/liff/new/shop"
+                className="rounded-full px-3 py-1.5 text-sm font-semibold text-white ring-1 ring-white/40 hover:bg-white/10"
+              >
+                เปลี่ยน
+              </Link>
             </div>
-            <Link href="/liff/new/shop" className={buttonClasses({ variant: "ghost", size: "sm" })}>
-              เปลี่ยน
-            </Link>
-          </div>
-        </Card>
 
-        <Card>
-          <ChoiceGroup legend="วิธีรับงาน">
-            <Radio
-              name="fulfillment"
-              checked={fulfillment === "pickup"}
-              onChange={() => updateDraft((d) => ({ ...d, fulfillment: "pickup" }))}
-              label="รับเองที่ร้าน"
+            <section>
+              <h2 className="mb-2 font-display text-lg font-bold italic">ไฟล์ที่พิมพ์</h2>
+              <ul className="divide-y divide-line rounded-card bg-surface ring-1 ring-line">
+                {draft.files.map((f) => (
+                  <li key={f.key} className="flex items-start gap-3 px-4 py-3">
+                    <Icon name="file" className="mt-0.5 size-5 shrink-0 text-ink-muted" />
+                    <div className="min-w-0">
+                      <p className="truncate font-medium">{f.name}</p>
+                      <p className="text-sm text-ink-muted">
+                        {f.paper} · {COLOR_LABEL[f.color]} · {SIDES_LABEL[f.sides]} · {f.pageCount}{" "}
+                        หน้า × {f.copies} ชุด
+                      </p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+              {services.length > 0 && (
+                <p className="mt-2 text-sm text-ink-muted">
+                  บริการเสริม: {services.map((s) => s.name).join(", ")}
+                </p>
+              )}
+              {delivery && (
+                <p className="mt-2 text-sm text-ink-muted">
+                  ส่งที่: {draft.delivery.address} · {draft.delivery.name} {draft.delivery.phone}
+                </p>
+              )}
+            </section>
+
+            <EstimateCard
+              loading={estimate.isLoading}
+              problem={estimate.error ? problemOf(estimate.error) : null}
+              data={estimate.data}
+              onRetry={() => estimate.mutate()}
+              onPickAnotherShop={pickAnotherShop}
             />
-            <Radio
-              name="fulfillment"
-              checked={fulfillment === "delivery"}
-              disabled={!canDeliver}
-              onChange={() => updateDraft((d) => ({ ...d, fulfillment: "delivery" }))}
-              label="ส่งถึงที่ (ไรเดอร์)"
-              description={
-                !shop.acceptsDelivery
-                  ? "ร้านนี้ไม่รับจัดส่ง"
-                  : !pos
-                    ? "ต้องอนุญาตตำแหน่งก่อน จึงเลือกส่งถึงที่ได้"
-                    : undefined
-              }
-            />
-          </ChoiceGroup>
-          {shop.acceptsDelivery && !pos && (
-            <Button
-              variant="secondary"
-              size="sm"
-              className="mt-2"
-              loading={location.kind === "asking"}
-              onClick={requestLocation}
-            >
-              ขออนุญาตตำแหน่งอีกครั้ง
-            </Button>
-          )}
 
-          {fulfillment === "delivery" && (
-            <div className="mt-4 flex flex-col gap-3">
-              <p className="rounded-control bg-info-50 p-3 text-sm text-info-ink">
-                ไรเดอร์จะไปส่งตามตำแหน่งที่คุณอนุญาตตอนนี้และที่อยู่ที่กรอก
-                ถ้าตอนนี้ไม่ได้อยู่ที่จุดส่ง ให้ระบุรายละเอียดในช่องที่อยู่
-              </p>
-              <Input
-                label="ชื่อผู้รับ"
-                required
-                autoComplete="name"
-                value={draft.delivery.name}
-                error={showErrors ? deliveryErrors.name : undefined}
-                onChange={(e) =>
-                  updateDraft((d) => ({ ...d, delivery: { ...d.delivery, name: e.target.value } }))
-                }
-              />
-              <Input
-                label="เบอร์โทรผู้รับ"
-                required
-                type="tel"
-                inputMode="tel"
-                autoComplete="tel"
-                value={draft.delivery.phone}
-                error={showErrors ? deliveryErrors.phone : undefined}
-                onChange={(e) =>
-                  updateDraft((d) => ({ ...d, delivery: { ...d.delivery, phone: e.target.value } }))
-                }
-              />
-              <Textarea
-                label="ที่อยู่และรายละเอียดจุดส่ง"
-                required
-                rows={3}
-                maxLength={500}
-                placeholder="เช่น หอพัก A ตึก 2 ห้อง 305 ฝากไว้ที่ป้อมยาม"
-                value={draft.delivery.address}
-                error={showErrors ? deliveryErrors.address : undefined}
-                onChange={(e) =>
-                  updateDraft((d) => ({
-                    ...d,
-                    delivery: { ...d.delivery, address: e.target.value },
-                  }))
-                }
-              />
-            </div>
-          )}
-        </Card>
-
-        <ServicesCard shop={shop} draft={draft} />
-
-        <Card>
-          <h2 className="font-semibold text-brand">ไฟล์ ({draft.files.length})</h2>
-          <ul className="mt-2 flex flex-col gap-2">
-            {draft.files.map((f) => (
-              <li key={f.key} className="text-sm">
-                <p className="truncate font-medium">{f.name}</p>
-                <p className="text-ink-muted">{fileSettingsText(f)}</p>
-              </li>
-            ))}
-          </ul>
-          {draft.note.trim() && (
-            <p className="mt-3 text-sm">
-              <span className="text-ink-muted">หมายเหตุ: </span>
-              {draft.note}
+            <p className="flex gap-2 rounded-card bg-surface px-4 py-3 text-sm text-ink-muted ring-1 ring-line">
+              <Icon name="clock" className="mt-0.5 size-4 shrink-0" />
+              ร้านจะยืนยันราคาและเวลาเสร็จภายใน 15 นาที ยังไม่ต้องจ่ายตอนนี้ · ร้านดาวน์โหลดไฟล์ได้
             </p>
-          )}
-          <Link
-            href="/liff/new"
-            className={buttonClasses({ variant: "ghost", size: "sm", className: "mt-2" })}
-          >
-            แก้ไขไฟล์
-          </Link>
-        </Card>
 
-        <EstimateCard
-          loading={estimate.isLoading}
-          problem={estimate.error ? problemOf(estimate.error) : null}
-          data={estimate.data}
-          onRetry={() => estimate.mutate()}
-          onPickAnotherShop={pickAnotherShop}
-        />
-      </div>
+            <Textarea
+              label="หมายเหตุถึงร้าน (ไม่บังคับ)"
+              rows={2}
+              maxLength={500}
+              placeholder="เช่น ขอแม็กซ์สีปก…"
+              value={draft.note}
+              onChange={(e) => updateDraft((d) => ({ ...d, note: e.target.value }))}
+            />
+          </div>
+        )}
+      </ChosenShopGate>
     </PageShell>
   );
 }
 
-function ServicesCard({ shop, draft }: { shop: ShopListItem; draft: OrderDraft }) {
-  const missing = shopExtras(shop.services, wantedExtras(draft.files)).missing;
-  if (shop.services.length === 0 && missing.length === 0) return null;
-  const manyFiles = draft.files.length > 1;
-
-  function toggle(serviceId: string, on: boolean) {
-    updateDraft((d) => ({
-      ...d,
-      services: on
-        ? [...d.services, { serviceId }]
-        : d.services.filter((s) => s.serviceId !== serviceId),
-    }));
-  }
-
-  function toggleFile(serviceId: string, index: number, on: boolean) {
-    updateDraft((d) => ({
-      ...d,
-      services: d.services.map((s) => {
-        if (s.serviceId !== serviceId) return s;
-        const all = d.files.map((_, i) => i);
-        const current = s.fileIndexes ?? all;
-        const next = on
-          ? [...new Set([...current, index])].sort()
-          : current.filter((i) => i !== index);
-        // every file again = leave it out (the API default)
-        return next.length === all.length ? { serviceId } : { serviceId, fileIndexes: next };
-      }),
-    }));
-  }
-
-  return (
-    <Card>
-      <h2 className="font-semibold text-brand">งานเพิ่มเติม (บริการของร้านนี้)</h2>
-      {missing.length > 0 && (
-        <p className="mt-2 rounded-control bg-warning-50 px-3 py-2 text-sm text-warning-ink">
-          ร้านนี้ไม่มี {missing.map((k) => EXTRA_LABEL[k]).join(", ")} ที่คุณเลือกไว้ เลือกร้านอื่น
-          หรือพิมพ์ถามร้านในหมายเหตุได้
-        </p>
-      )}
-      {draft.services.length > 0 && (
-        <p className="mt-1 text-xs text-ink-muted">เลือกไว้ให้ตามงานเพิ่มเติมที่คุณขอ แก้ได้</p>
-      )}
-      <div className="mt-2 flex flex-col gap-3">
-        {shop.services.map((s) => {
-          const chosen = draft.services.find((x) => x.serviceId === s.id);
-          return (
-            <div key={s.id}>
-              <Checkbox
-                checked={Boolean(chosen)}
-                onChange={(e) => toggle(s.id, e.target.checked)}
-                label={s.name}
-                description={
-                  s.priceSatang === null ? (
-                    "ราคาตามตกลง (ร้านจะแจ้งราคา)"
-                  ) : (
-                    <>
-                      <Money satang={s.priceSatang} />/{UNIT_LABEL[s.unit]}
-                    </>
-                  )
-                }
-              />
-              {chosen && s.unit === "per_set" && manyFiles && (
-                <fieldset className="mt-1 ml-9 flex flex-col gap-1">
-                  <legend className="text-sm text-ink-muted">ใช้กับไฟล์</legend>
-                  {draft.files.map((f, i) => (
-                    <Checkbox
-                      key={f.key}
-                      checked={(chosen.fileIndexes ?? draft.files.map((_, j) => j)).includes(i)}
-                      disabled={chosen.fileIndexes?.length === 1 && chosen.fileIndexes[0] === i}
-                      onChange={(e) => toggleFile(s.id, i, e.target.checked)}
-                      label={<span className="text-sm">{f.name}</span>}
-                    />
-                  ))}
-                </fieldset>
-              )}
-            </div>
-          );
-        })}
-      </div>
-    </Card>
-  );
-}
-
-function Line({
+function Row({
   label,
   children,
-  note,
+  muted,
 }: {
   label: string;
   children: React.ReactNode;
-  note?: string;
+  muted?: boolean;
 }) {
   return (
-    <div className="flex items-baseline justify-between gap-3">
-      <dt>
-        {label}
-        {note && <span className="ml-1 text-xs text-ink-muted">({note})</span>}
-      </dt>
-      <dd className="text-right">{children}</dd>
+    <div className={cx("flex items-baseline justify-between gap-3", muted && "text-ink-muted")}>
+      <dt>{label}</dt>
+      <dd className="tabular-nums">{children}</dd>
     </div>
   );
 }
@@ -419,19 +233,21 @@ function EstimateCard({
   onRetry: () => void;
   onPickAnotherShop: () => void;
 }) {
-  if (loading && !data) return <Skeleton className="h-32" />;
-  if (problem && problem.pickAnotherShop) {
-    // e.g. "ร้านนี้ไม่รับงานแบบ สี A3 สองด้าน (ไฟล์ ...)": retrying will not help
+  if (loading && !data) return <Skeleton className="h-40" />;
+  if (problem?.pickAnotherShop) {
     return (
-      <Card className="bg-warning-50" role="alert">
-        <p className="font-semibold text-warning-ink">ร้านนี้รับออเดอร์นี้ไม่ได้</p>
-        <p className="mt-1 text-sm text-warning-ink">{problem.message}</p>
+      <Card className="border-l-4 border-l-warning-ink" role="alert">
+        <p className="font-semibold">ร้านนี้รับออเดอร์นี้ไม่ได้</p>
+        <p className="mt-1 text-sm text-ink-muted">{problem.message}</p>
         <div className="mt-3 flex flex-wrap gap-2">
           <Button size="sm" onClick={onPickAnotherShop}>
             เลือกร้านอื่น
           </Button>
-          <Link href="/liff/new" className={buttonClasses({ variant: "secondary", size: "sm" })}>
-            แก้ไขไฟล์
+          <Link
+            href="/liff/new/settings"
+            className={buttonClasses({ variant: "secondary", size: "sm" })}
+          >
+            แก้ไขการตั้งค่า
           </Link>
         </div>
       </Card>
@@ -446,50 +262,49 @@ function EstimateCard({
 
   return (
     <Card aria-live="polite">
-      <h2 className="font-semibold text-brand">ราคาประมาณ</h2>
       {data.requiresManualPrice && (
-        <p className="mt-2 rounded-control bg-warning-50 p-3 text-sm text-warning-ink">
-          ออเดอร์ขนาดใหญ่ ร้านจะแจ้งราคาให้เร็ว ๆ นี้ หลังร้านยืนยันแล้วคุณจะเห็นยอดที่ต้องชำระ
+        <p className="mb-3 rounded-xl bg-warning-50 px-3 py-2 text-sm text-warning-ink">
+          ออเดอร์ขนาดใหญ่หรือมีบริการราคาตามตกลง ร้านจะแจ้งราคาให้เร็ว ๆ นี้
         </p>
       )}
-      <dl className="mt-2 flex flex-col gap-1.5">
+      <dl className="flex flex-col gap-1.5">
         {data.estimatedPrintSatang !== null && (
-          <Line label="ค่าปริ้น">
+          <Row label="ค่าปริ้น">
             <Money satang={data.estimatedPrintSatang} />
-          </Line>
+          </Row>
         )}
         {data.serviceLines.map((l, i) => (
           // a per-set service has one line per file, so the id repeats
-          <Line key={`${l.serviceId}-${i}`} label={`${l.name} × ${l.quantity}`}>
+          <Row
+            key={`${l.serviceId}-${i}`}
+            label={`${l.name}${l.quantity > 1 ? ` × ${l.quantity}` : ""}`}
+          >
             {l.lineTotalSatang === null ? (
               <span className="text-sm text-ink-muted">ราคาตามตกลง</span>
             ) : (
               <Money satang={l.lineTotalSatang} />
             )}
-          </Line>
+          </Row>
         ))}
         {data.platformFeeSatang !== null && (
-          <Line label="ค่าบริการ">
+          <Row label="ค่าบริการแพลตฟอร์ม" muted>
             <Money satang={data.platformFeeSatang} />
-          </Line>
+          </Row>
         )}
         {data.deliveryFeeSatang > 0 && (
-          <Line label="ค่าส่ง" note="ค่าประมาณ">
+          <Row label="ค่าส่ง (ประมาณ)" muted>
             <Money satang={data.deliveryFeeSatang} />
-          </Line>
+          </Row>
         )}
         {data.totalSatang !== null && (
-          <div className="mt-1 flex items-baseline justify-between border-t border-line pt-2 text-lg font-semibold">
-            <dt>รวม</dt>
-            <dd>
+          <div className="mt-2 flex items-baseline justify-between border-t border-line pt-3">
+            <dt className="font-display text-lg font-bold italic">รวมประมาณ</dt>
+            <dd className="font-display text-2xl font-bold text-accent-ink italic">
               <Money satang={data.totalSatang} />
             </dd>
           </div>
         )}
       </dl>
-      <p className="mt-2 text-xs text-ink-muted">
-        ร้านจะยืนยันราคาอีกครั้งก่อนให้ชำระเงิน · ชำระแล้วยกเลิกเองไม่ได้
-      </p>
     </Card>
   );
 }
