@@ -22,21 +22,36 @@ self.addEventListener("push", (event) => {
   event.waitUntil(self.registration.showNotification(title, options));
 });
 
+/** Only a /shop page of this site may be opened: checked AFTER URL parsing, which strips tabs etc. */
+function targetFor(raw) {
+  const origin = self.location.origin;
+  try {
+    const url = new URL(typeof raw === "string" ? raw : "/shop", origin);
+    if (url.origin === origin && (url.pathname === "/shop" || url.pathname.startsWith("/shop/"))) {
+      return url.href;
+    }
+  } catch {
+    // fall through to the dashboard
+  }
+  return `${origin}/shop`;
+}
+
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  // Same-origin paths only: a payload must not be able to send the shop to another site
-  const raw = (event.notification.data && event.notification.data.url) || "/shop";
-  const path = typeof raw === "string" && raw.startsWith("/") && !raw.startsWith("//") ? raw : "/shop";
-  const target = new URL(path, self.location.origin).href;
+  const target = targetFor(event.notification.data && event.notification.data.url);
 
   event.waitUntil(
     self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((windows) => {
-      for (const client of windows) {
-        if (new URL(client.url).origin === self.location.origin && "focus" in client) {
-          return client.navigate(target).then((c) => (c || client).focus());
-        }
-      }
-      return self.clients.openWindow(target);
+      const shopWindow = windows.find((c) => {
+        const u = new URL(c.url);
+        return u.origin === self.location.origin && u.pathname.startsWith("/shop") && "focus" in c;
+      });
+      if (!shopWindow) return self.clients.openWindow(target);
+      // navigate() rejects for a window this worker does not control: open a new one then
+      return shopWindow
+        .navigate(target)
+        .then((c) => (c || shopWindow).focus())
+        .catch(() => self.clients.openWindow(target));
     }),
   );
 });

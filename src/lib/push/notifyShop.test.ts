@@ -1,10 +1,11 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
+import vm from "node:vm";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const sendNotification = vi.fn();
 const setVapidDetails = vi.fn();
-vi.mock("web-push", () => ({ default: { sendNotification, setVapidDetails } }));
+vi.mock("web-push", () => ({ sendNotification, setVapidDetails }));
 
 // A tiny stand-in for the Supabase query builder: records deletes/updates, returns fake rows
 const calls: { op: string; table: string; filters: Record<string, string> }[] = [];
@@ -89,21 +90,26 @@ describe("notifyShop", () => {
     expect(calls.filter((c) => c.op === "delete")).toHaveLength(0);
   });
 
-  it.each([404, 410])("deletes a subscription the push service reports gone (%i)", async (statusCode) => {
-    sendNotification.mockRejectedValue(Object.assign(new Error("gone"), { statusCode }));
-    const { notifyShop } = await load();
-    await notifyShop("shop-1", "order_new", ref);
-    expect(calls).toEqual([
-      {
-        op: "delete",
-        table: "push_subscriptions",
-        filters: { endpoint: "https://push.example/a", shop_id: "shop-1" },
-      },
-    ]);
-  });
+  it.each([404, 410])(
+    "deletes a subscription the push service reports gone (%i)",
+    async (statusCode) => {
+      sendNotification.mockRejectedValue(Object.assign(new Error("gone"), { statusCode }));
+      const { notifyShop } = await load();
+      await notifyShop("shop-1", "order_new", ref);
+      expect(calls).toEqual([
+        {
+          op: "delete",
+          table: "push_subscriptions",
+          filters: { endpoint: "https://push.example/a", shop_id: "shop-1" },
+        },
+      ]);
+    },
+  );
 
   it("keeps the subscription on other failures and never throws", async () => {
-    sendNotification.mockRejectedValue(Object.assign(new Error("https://secret-endpoint"), { statusCode: 500 }));
+    sendNotification.mockRejectedValue(
+      Object.assign(new Error("https://secret-endpoint"), { statusCode: 500 }),
+    );
     const { notifyShop } = await load();
     await expect(notifyShop("shop-1", "order_new", ref)).resolves.toBeUndefined();
     expect(calls).toHaveLength(0);
@@ -158,9 +164,59 @@ describe("secrets stay on the server", () => {
     expect(readFileSync("src/lib/push/notifyShop.ts", "utf8")).toContain('import "server-only"');
   });
 
-  it("the service worker only opens same-origin links", () => {
-    const sw = readFileSync("public/sw.js", "utf8");
-    expect(sw).toContain('startsWith("/")');
-    expect(sw).toContain('startsWith("//")');
+  describe("service worker notificationclick", () => {
+    const ORIGIN = "https://printgo.test";
+    function click(
+      url: unknown,
+      windows: { url: string; navigate: () => Promise<unknown> }[] = [],
+    ) {
+      const handlers: Record<string, (e: unknown) => void> = {};
+      const opened: string[] = [];
+      const self = {
+        location: { origin: ORIGIN },
+        addEventListener: (type: string, fn: (e: unknown) => void) => (handlers[type] = fn),
+        skipWaiting: () => {},
+        clients: {
+          matchAll: () =>
+            Promise.resolve(windows.map((w) => ({ ...w, focus: () => Promise.resolve(w) }))),
+          openWindow: (u: string) => (opened.push(u), Promise.resolve()),
+          claim: () => Promise.resolve(),
+        },
+      };
+      vm.runInNewContext(readFileSync("public/sw.js", "utf8"), { self, URL });
+      let done: Promise<unknown> = Promise.resolve();
+      handlers.notificationclick({
+        notification: { close: () => {}, data: { url } },
+        waitUntil: (p: Promise<unknown>) => (done = p),
+      });
+      return done.then(() => opened);
+    }
+
+    it("opens the order page of this site", async () => {
+      expect(await click("/shop/orders/abc")).toEqual([`${ORIGIN}/shop/orders/abc`]);
+    });
+
+    it.each([
+      "/	/evil.com",
+      "/\evil.com",
+      "//evil.com",
+      "https://evil.com/shop/orders/1",
+      "javascript:alert(1)",
+      "/liff/orders/1",
+      "/shopx",
+      42,
+      undefined,
+    ])("falls back to the dashboard for %j", async (url) => {
+      const raw = typeof url === "string" ? url.replace("\t", "	") : url;
+      expect(await click(raw)).toEqual([`${ORIGIN}/shop`]);
+    });
+
+    it("opens a new window when navigating an existing one fails", async () => {
+      const win = {
+        url: `${ORIGIN}/shop`,
+        navigate: () => Promise.reject(new Error("not controlled")),
+      };
+      expect(await click("/shop/orders/abc", [win])).toEqual([`${ORIGIN}/shop/orders/abc`]);
+    });
   });
 });

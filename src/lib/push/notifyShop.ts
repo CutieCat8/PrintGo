@@ -1,5 +1,5 @@
 import "server-only";
-import webpush from "web-push";
+import { sendNotification, setVapidDetails } from "web-push";
 import { getServiceClient } from "@/lib/db/server";
 
 /**
@@ -55,7 +55,7 @@ function configureVapid(): boolean {
     return (vapidReady = false);
   }
   try {
-    webpush.setVapidDetails(subject, publicKey, privateKey);
+    setVapidDetails(subject, publicKey, privateKey);
     return (vapidReady = true);
   } catch {
     // Never log the key itself
@@ -94,7 +94,7 @@ export async function notifyShop(
     await Promise.allSettled(
       subscriptions.map(async (sub) => {
         try {
-          await webpush.sendNotification(
+          await sendNotification(
             { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
             payload,
             { TTL: TTL_SECONDS, timeout: SEND_TIMEOUT_MS, urgency: "high" },
