@@ -894,9 +894,11 @@ describe("nothing else writes orders.status", () => {
   });
 
   it("only internal transition RPCs persist orders.status in SQL", () => {
-    const offenders = sources("supabase", ["sql"]).filter((p) =>
-      /update\s+(public\.)?orders\b[^;]{0,300}?\bstatus\s*=/i.test(readFileSync(p, "utf8")),
-    );
+    const offenders = sources("supabase", ["sql"])
+      .filter((p) =>
+        /update\s+(public\.)?orders[^;]{0,300}?status\s*=/i.test(readFileSync(p, "utf8")),
+      )
+      .map((p) => p.replace(/\/g, "/")); // Windows paths use backslashes
     expect(offenders).toEqual([
       "supabase/migrations/20261112090000_atomic_order_finance.sql",
       "supabase/migrations/20261114090000_manual_delivery_transition.sql",
