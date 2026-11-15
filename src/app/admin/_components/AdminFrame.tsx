@@ -9,10 +9,11 @@ import { useAdminShops } from "../_lib/api";
 const menu = [
   { href: "/admin", label: "ภาพรวม", ready: true },
   { href: "/admin/shops", label: "ร้าน", ready: true },
-  { href: "/admin/payments", label: "การชำระเงินรอตรวจ", ready: false },
-  { href: "/admin/orders", label: "ออเดอร์", ready: false },
-  { href: "/admin/settlements", label: "โอนให้ร้าน", ready: false },
-  { href: "/admin/refunds", label: "คืนเงิน", ready: false },
+  { href: "/admin/payments", label: "การชำระเงินรอตรวจ", ready: true },
+  { href: "/admin/orders", label: "ออเดอร์", ready: true },
+  { href: "/admin/deliveries", label: "จัดส่งด้วยมือ", ready: true },
+  { href: "/admin/settlements", label: "โอนให้ร้าน", ready: true },
+  { href: "/admin/refunds", label: "คืนเงิน", ready: true },
 ];
 /** Admin-specific menu; Yuri's existing DashboardShell is shop-only. */
 export function AdminFrame({ children }: { children: ReactNode }) {

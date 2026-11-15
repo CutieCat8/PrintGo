@@ -1,4 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+const transitionMock = vi.hoisted(() => vi.fn());
+vi.mock("@/lib/domain/orders/transition", () => ({ transitionManualDelivery: transitionMock }));
 import {
   applyDeliveryUpdate,
   createDeliveryForOrder,
@@ -110,8 +112,16 @@ describe("createDeliveryForOrder", () => {
 });
 
 describe("applyDeliveryUpdate", () => {
+  it("routes manual updates through the atomic order transition boundary", async () => {
+    results.deliveries = [{ data: { provider: "manual" }, error: null }];
+    transitionMock.mockResolvedValue({ status: "booked" });
+    await applyDeliveryUpdate("o1", { status: "booked", feeSatang: 6500 });
+    expect(transitionMock).toHaveBeenCalledWith("o1", { status: "booked", feeSatang: 6500 });
+    expect(calls.some((c) => c.op === "update")).toBe(false);
+  });
   it("writes snake_case columns for the given order", async () => {
     results.deliveries = [
+      { data: { provider: "grab" }, error: null },
       { data: { ...deliveryRow, status: "booked", fee_satang: 6500 }, error: null },
     ];
     const d = await applyDeliveryUpdate("o1", { status: "booked", feeSatang: 6500 });
