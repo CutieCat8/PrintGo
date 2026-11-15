@@ -13,7 +13,6 @@ import { setCustomerTokenProvider, setDevCustomer } from "./http";
 export type LiffState =
   | { kind: "ready"; mode: "liff" | "dev"; displayName: string | null }
   | { kind: "redirecting" }
-  | { kind: "outside_line" }
   | { kind: "not_configured" }
   | { kind: "error"; message: string };
 
@@ -42,9 +41,7 @@ async function start(): Promise<LiffState> {
     const { default: liff } = await import("@line/liff");
     await liff.init({ liffId: LIFF_ID });
 
-    // Production: only inside the LINE app. Development: a normal browser may log in with LINE.
-    if (!liff.isInClient() && !dev) return { kind: "outside_line" };
-
+    // Works both inside the LINE app and in a normal desktop/mobile browser (LINE web login).
     if (!liff.isLoggedIn()) {
       liff.login({ redirectUri: window.location.href });
       return { kind: "redirecting" };

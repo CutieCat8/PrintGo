@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
-import { EmptyState, ErrorState, Spinner, Icon } from "@/components/ui";
+import { ErrorState, Spinner } from "@/components/ui";
 import { startCustomerSession, type LiffState } from "@/lib/client/liff";
 
 function Centered({ children }: { children: ReactNode }) {
@@ -31,18 +31,6 @@ export function LiffGate({ children }: { children: ReactNode }) {
           <Spinner className="size-8 text-brand" />
           {state ? "กำลังพาไปเข้าสู่ระบบ LINE…" : "กำลังเปิด PrintGo…"}
         </div>
-      </Centered>
-    );
-  }
-
-  if (state.kind === "outside_line") {
-    return (
-      <Centered>
-        <EmptyState
-          icon={<Icon name="chat" className="size-7" />}
-          title="กรุณาเปิดจากแอป LINE"
-          description="หน้านี้ใช้งานผ่าน LINE OA ของ PrintGo เท่านั้น เปิด LINE แล้วกดเมนู สั่งปริ้น"
-        />
       </Centered>
     );
   }
