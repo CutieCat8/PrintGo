@@ -24,6 +24,7 @@ import {
   unlockAudio,
 } from "@/lib/client/alert";
 import { useChats, useShopMe, useShopOrders } from "@/lib/client/hooks";
+import { enablePush, isPushOn, pushSupport } from "@/lib/client/push";
 
 function Centered({ children }: { children: ReactNode }) {
   return <div className="flex min-h-dvh items-center justify-center p-6">{children}</div>;
@@ -160,6 +161,7 @@ function ActiveDashboard({ children }: { children: ReactNode }) {
       </Banner>,
     );
   }
+  if (active) banners.push(<PushBanner key="push" />);
   if (active) banners.push(<SoundBanner key="sound" />);
 
   return (
@@ -189,6 +191,65 @@ function Banner({ tone, children }: { tone: "warning" | "info"; children: ReactN
     >
       {children}
     </div>
+  );
+}
+
+/**
+ * Web Push (D17): offers "เปิดแจ้งเตือนบนเครื่องนี้" until this device is subscribed, so the shop is
+ * told about new orders even with the dashboard closed. Hidden where the browser cannot do it.
+ */
+function PushBanner() {
+  const [state, setState] = useState<"hidden" | "off" | "denied">("hidden");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    const support = pushSupport();
+    const next =
+      support === "denied"
+        ? Promise.resolve("denied" as const)
+        : support === "ok"
+          ? isPushOn().then((on) => (on ? ("hidden" as const) : ("off" as const)))
+          : Promise.resolve("hidden" as const);
+    next.then((s) => alive && setState(s));
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  if (state === "hidden") return null;
+  if (state === "denied") {
+    return (
+      <Banner tone="info">
+        เบราว์เซอร์บล็อกการแจ้งเตือนอยู่ — ไปที่การตั้งค่าเว็บไซต์แล้วอนุญาตการแจ้งเตือนเพื่อรับออเดอร์ตอนปิดหน้านี้
+      </Banner>
+    );
+  }
+  return (
+    <Banner tone="info">
+      ปิดหน้านี้แล้วจะไม่ได้รับแจ้งเตือนออเดอร์ใหม่{" "}
+      <button
+        type="button"
+        disabled={busy}
+        className="font-semibold underline"
+        onClick={async () => {
+          setBusy(true);
+          setError(null);
+          try {
+            const result = await enablePush();
+            setState(result === "on" ? "hidden" : result === "denied" ? "denied" : "off");
+          } catch (e) {
+            setError(errorMessage(e));
+          } finally {
+            setBusy(false);
+          }
+        }}
+      >
+        เปิดแจ้งเตือนบนเครื่องนี้
+      </button>
+      {error ? <span className="ml-2 text-danger">{error}</span> : null}
+    </Banner>
   );
 }
 
