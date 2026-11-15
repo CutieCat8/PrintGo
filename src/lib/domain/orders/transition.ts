@@ -8,6 +8,55 @@ import { calculateTotals, getFeeRate } from "@/lib/domain/pricing";
 import { ApiError } from "@/lib/errors";
 import { notify } from "@/lib/line/notify";
 import { ACTIVE_STATUSES, findRule, type Actor, type PatchKey, type TransitionRule } from "./rules";
+import { ManualDeliveryUpdate, manualOrderTarget } from "@/lib/delivery/manual-update";
+import { Delivery } from "@/lib/db/types";
+
+/** Manual delivery persistence belongs to the transition boundary: order + delivery commit together. */
+export async function transitionManualDelivery(orderId: string, input: unknown) {
+  const parsed = ManualDeliveryUpdate.safeParse(input);
+  if (!parsed.success) throw new ApiError("VALIDATION_ERROR", 422);
+  const update = parsed.data;
+  const db = getServiceClient();
+  const order = await readOrder(db, orderId);
+  const target = manualOrderTarget(update.status);
+  if (target && order.status !== target && !findRule([order.status], target, "admin"))
+    throw new ApiError("ORDER_INVALID_TRANSITION", 409);
+  const { data, error } = await db.rpc("transition_manual_delivery", {
+    p_order_id: orderId,
+    p_update: update,
+  });
+  if (error) {
+    const status =
+      error.code === "PT404"
+        ? 404
+        : error.code === "PT409"
+          ? 409
+          : error.code === "PT422"
+            ? 422
+            : 500;
+    throw new ApiError(
+      status === 404
+        ? "NOT_FOUND"
+        : status === 409
+          ? "ORDER_INVALID_TRANSITION"
+          : status === 422
+            ? "VALIDATION_ERROR"
+            : "INTERNAL",
+      status,
+    );
+  }
+  if (!data || typeof data.orderChanged !== "boolean") throw new ApiError("INTERNAL", 500);
+  const delivery = parseRow(Delivery, data.delivery);
+  if (data.orderChanged && target) {
+    // The SQL primitive rechecks the same permitted step under the order lock.
+    try {
+      await notify(orderId, target);
+    } catch {
+      console.error("[delivery] notification failed");
+    }
+  }
+  return delivery;
+}
 
 /** Number of digits of a new pickup code (D25). Grows by one if every candidate is taken. */
 export const PICKUP_CODE_DIGITS = 4;
@@ -170,7 +219,10 @@ async function runTransition(args: TransitionArgs, payment?: PaymentContext): Pr
   if (to === "completed" && actor === "shop" && patch.rejectReason !== undefined) {
     throw invalid("ขั้นตอนนี้ไม่รับเหตุผลจากร้าน", { field: "rejectReason" });
   }
-  if (rule.requiresReason || (to === "completed" && actor === "admin" && rule.fulfillment === "pickup")) {
+  if (
+    rule.requiresReason ||
+    (to === "completed" && actor === "admin" && rule.fulfillment === "pickup")
+  ) {
     const text = typeof patch.rejectReason === "string" ? patch.rejectReason.trim() : "";
     if (text === "" || text.length > MAX_REASON_LENGTH) {
       throw invalid("ต้องระบุเหตุผล", { field: "rejectReason" });

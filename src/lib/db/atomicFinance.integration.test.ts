@@ -106,6 +106,7 @@ describe.skipIf(!container)("financial RPC on actual PostgreSQL", () => {
     sql(readFileSync("supabase/migrations/20261110100632_init_schema.sql", "utf8"));
     sql(readFileSync("supabase/migrations/20261112090000_atomic_order_finance.sql", "utf8"));
     sql(readFileSync("supabase/migrations/20261113090000_admin_payment_review.sql", "utf8"));
+    sql(readFileSync("supabase/migrations/20261114090000_manual_delivery_transition.sql", "utf8"));
   }, 30000);
   afterAll(() => {
     sql(`drop database if exists ${database} with (force);`, "postgres");
@@ -353,5 +354,111 @@ describe.skipIf(!container)("financial RPC on actual PostgreSQL", () => {
         "select has_function_privilege('service_role','public.review_order_payment(uuid,text,text)','execute');",
       ),
     ).toBe("t");
+  });
+  function manualFixture() {
+    const id = order("courier_requested");
+    sql(`update public.orders set fulfillment='delivery',delivery_address='ตัวอย่างสมมติ',delivery_lat=0,delivery_lng=0,delivery_recipient_name='ตัวอย่างสมมติ',delivery_recipient_phone='0000000000',paid_at=now() where id='${id}';
+      insert into public.deliveries(order_id,provider,status) values('${id}','manual','pending_admin');`);
+    return id;
+  }
+  function deliveryRpc(id: string, status: string, extra: Record<string, unknown> = {}) {
+    return `select public.transition_manual_delivery('${id}',${literal(JSON.stringify({ status, ...extra }))}::jsonb);`;
+  }
+  function deliverySnapshot(id: string) {
+    return JSON.parse(
+      sql(`select jsonb_build_object('order',(select to_jsonb(o) from public.orders o where id='${id}'),
+      'delivery',(select to_jsonb(d) from public.deliveries d where order_id='${id}'));`),
+    );
+  }
+  it("manual delivery commits order and delivery together; never changes customer totals", () => {
+    const id = manualFixture();
+    sql(deliveryRpc(id, "booked", { feeSatang: 6500 }));
+    expect(deliverySnapshot(id).order.status).toBe("courier_requested");
+    sql(deliveryRpc(id, "in_transit"));
+    expect(deliverySnapshot(id).order.status).toBe("in_transit");
+    sql(deliveryRpc(id, "delivered"));
+    const result = deliverySnapshot(id);
+    expect(result.order.status).toBe("completed");
+    expect(result.order.completed_at).not.toBeNull();
+    expect(result.order.total_satang).toBe(12600);
+    expect(result.delivery.fee_satang).toBe(6500);
+    expect(result.delivery.status).toBe("delivered");
+  });
+  it("concurrent manual replay has one order change and preserves timestamp", async () => {
+    const id = manualFixture();
+    sql(deliveryRpc(id, "booked"));
+    const results = await Promise.all([
+      concurrent(deliveryRpc(id, "in_transit")),
+      concurrent(deliveryRpc(id, "in_transit")),
+    ]);
+    expect(results.map((r) => JSON.parse(r).orderChanged).sort()).toEqual([false, true]);
+    const before = deliverySnapshot(id);
+    sql(deliveryRpc(id, "in_transit"));
+    expect(deliverySnapshot(id)).toEqual(before);
+    expect(() => sql(deliveryRpc(id, "in_transit", { feeSatang: 1 }))).toThrow();
+  });
+  it("manual failure can be rebooked without rewinding an in-transit order", () => {
+    const id = manualFixture();
+    sql(deliveryRpc(id, "booked"));
+    sql(deliveryRpc(id, "in_transit"));
+    sql(deliveryRpc(id, "failed"));
+    sql(deliveryRpc(id, "booked"));
+    expect(deliverySnapshot(id).order.status).toBe("in_transit");
+    sql(deliveryRpc(id, "in_transit"));
+    sql(deliveryRpc(id, "delivered"));
+    expect(deliverySnapshot(id).order.status).toBe("completed");
+  });
+  it("rejects skipped, stale and cancelled delivery updates without mutation", () => {
+    const id = manualFixture();
+    const before = deliverySnapshot(id);
+    expect(() => sql(deliveryRpc(id, "delivered"))).toThrow();
+    expect(deliverySnapshot(id)).toEqual(before);
+    sql(deliveryRpc(id, "booked"));
+    sql(rpc(id, null, { from: ["courier_requested"], to: "cancelled", actor: "admin" }));
+    const cancelled = deliverySnapshot(id);
+    expect(() => sql(deliveryRpc(id, "in_transit"))).toThrow();
+    expect(deliverySnapshot(id)).toEqual(cancelled);
+  });
+  it("rolls back both changes when delivery update fails", () => {
+    const id = manualFixture();
+    sql(deliveryRpc(id, "booked"));
+    const before = deliverySnapshot(id);
+    sql(`create function public.test_fail_delivery() returns trigger language plpgsql as $$ begin raise exception 'fictional failure'; end $$;
+      create trigger test_fail before update on public.deliveries for each row execute function public.test_fail_delivery();`);
+    try {
+      expect(() => sql(deliveryRpc(id, "in_transit"))).toThrow();
+      expect(deliverySnapshot(id)).toEqual(before);
+    } finally {
+      sql(
+        "drop trigger test_fail on public.deliveries; drop function public.test_fail_delivery();",
+      );
+    }
+  });
+  it("manual update serializes against financial cancellation", async () => {
+    const id = manualFixture();
+    sql(deliveryRpc(id, "booked"));
+    await Promise.allSettled([
+      concurrent(deliveryRpc(id, "in_transit")),
+      concurrent(
+        rpc(id, null, {
+          from: ["courier_requested", "in_transit"],
+          to: "cancelled",
+          actor: "admin",
+        }),
+      ),
+    ]);
+    const state = deliverySnapshot(id);
+    expect(state.order.status).toBe("cancelled");
+    expect(sql(`select count(*) from public.refunds where order_id='${id}'`)).toBe("1");
+    expect(() => sql(deliveryRpc(id, "delivered"))).toThrow();
+  });
+  it("manual RPC refuses untrusted roles, malformed fees and pickup orders", () => {
+    const id = manualFixture();
+    expect(() => sql(`set role anon; ${deliveryRpc(id, "booked")}`)).toThrow();
+    expect(() => sql(`set role authenticated; ${deliveryRpc(id, "booked")}`)).toThrow();
+    for (const feeSatang of [-1, 1.5, 2147483648, null])
+      expect(() => sql(deliveryRpc(id, "booked", { feeSatang }))).toThrow();
+    sql(`update public.orders set fulfillment='pickup' where id='${id}'`);
+    expect(() => sql(deliveryRpc(id, "booked"))).toThrow();
   });
 });

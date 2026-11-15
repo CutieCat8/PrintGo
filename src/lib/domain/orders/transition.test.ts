@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/lib/errors";
 import type { Actor } from "./rules";
 import { ACTIVE_STATUSES, TERMINAL_STATUSES, TRANSITIONS } from "./rules";
-import { finalizePayment, transition } from "./transition";
+import { finalizePayment, transition, transitionManualDelivery } from "./transition";
 
 // ---------------------------------------------------------------------------------------------
 // An in-memory stand-in for the Supabase client. It is NOT Postgres: it only imitates the few
@@ -893,11 +893,14 @@ describe("nothing else writes orders.status", () => {
     expect(offenders).toEqual([]);
   });
 
-  it("only the internal financial RPC persists orders.status in SQL", () => {
+  it("only internal transition RPCs persist orders.status in SQL", () => {
     const offenders = sources("supabase", ["sql"]).filter((p) =>
       /update\s+(public\.)?orders\b[^;]{0,300}?\bstatus\s*=/i.test(readFileSync(p, "utf8")),
     );
-    expect(offenders).toEqual(["supabase/migrations/20261112090000_atomic_order_finance.sql"]);
+    expect(offenders).toEqual([
+      "supabase/migrations/20261112090000_atomic_order_finance.sql",
+      "supabase/migrations/20261114090000_manual_delivery_transition.sql",
+    ]);
   });
 
   it("the table covers every open status", () => {
@@ -985,5 +988,44 @@ describe("admin completion requires and preserves the reason", () => {
       patch: { rejectReason: "ตัวอย่างสมมติ" },
     });
     expect(stored(o).reject_reason).toBe("ตัวอย่างสมมติ");
+  });
+});
+
+describe("manual delivery transition boundary", () => {
+  const delivery = {
+    id: "00000000-0000-4000-8000-000000000099",
+    provider: "manual",
+    status: "in_transit",
+    fee_satang: 6500,
+    tracking_url: null,
+    note: null,
+    updated_at: "2026-11-13T00:00:00Z",
+  };
+  it("notifies only after a committed order change, not on replay", async () => {
+    const o = seed({ status: "courier_requested", fulfillment: "delivery" });
+    const rpc = vi
+      .spyOn(db, "rpc")
+      .mockResolvedValue({ data: { delivery, orderChanged: true }, error: null } as never);
+    expect(
+      (await transitionManualDelivery(o.id as string, { status: "in_transit" })).feeSatang,
+    ).toBe(6500);
+    expect(h.notify).toHaveBeenCalledWith(o.id, "in_transit");
+    h.notify.mockClear();
+    rpc.mockResolvedValue({ data: { delivery, orderChanged: false }, error: null } as never);
+    await transitionManualDelivery(o.id as string, { status: "in_transit" });
+    expect(h.notify).not.toHaveBeenCalled();
+  });
+  it("never notifies after persistence failure and hides DB details", async () => {
+    const o = seed({ status: "courier_requested", fulfillment: "delivery" });
+    vi.spyOn(db, "rpc").mockResolvedValue({
+      data: null,
+      error: { code: "PT409", details: "private" },
+    } as never);
+    await expectApiError(
+      transitionManualDelivery(o.id as string, { status: "in_transit" }),
+      "ORDER_INVALID_TRANSITION",
+      409,
+    );
+    expect(h.notify).not.toHaveBeenCalled();
   });
 });

@@ -10,8 +10,7 @@ export type { LatLng } from "./types";
 
 /**
  * Z7. Signatures are fixed by docs/CONTRACTS.md section 7. The state change after an admin update
- * (`transition` to in_transit/completed + notify) is not wired yet: `transition` (P2) and the
- * Flex templates (Z6) do not exist in this branch.
+ * Manual updates use the order transition boundary. Grab's existing webhook path is separate.
  */
 
 /** `DELIVERY_PROVIDER` picks the provider; `grab` needs its credentials, otherwise it throws. */
@@ -102,6 +101,16 @@ export async function applyDeliveryUpdate(
   orderId: string,
   update: { status: DeliveryStatus; feeSatang?: number; trackingUrl?: string; note?: string },
 ): Promise<Delivery> {
+  const current = await getServiceClient()
+    .from("deliveries")
+    .select("provider")
+    .eq("order_id", orderId)
+    .maybeSingle();
+  if (current.error) throw current.error;
+  if (current.data?.provider === "manual") {
+    const { transitionManualDelivery } = await import("@/lib/domain/orders/transition");
+    return transitionManualDelivery(orderId, update);
+  }
   const { data, error } = await getServiceClient()
     .from("deliveries")
     .update(toDb(update))
