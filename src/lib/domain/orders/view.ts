@@ -61,7 +61,7 @@ export type DetailParts = {
   delivery: DeliveryRow | null;
 };
 
-function presentParts(row: OrderRow, parts: DetailParts, viewer: Viewer) {
+function presentParts(row: OrderRow, parts: DetailParts, viewer: Viewer | "admin") {
   const hidePrice = viewer === "customer" && row.requiresManualPrice && row.status === "submitted";
   return {
     files: parts.files.map((f) => OrderFile.parse(f)),
@@ -94,6 +94,18 @@ export function presentCustomerOrderDetail(
   return OrderDetail.parse({
     ...presentOrder(row, { shopName: parts.shop.name, viewer: "customer", ...opts }),
     ...presentParts(row, parts, "customer"),
+    deliveryRecipientName: row.deliveryRecipientName,
+    deliveryRecipientPhone: row.deliveryRecipientPhone,
+  });
+}
+
+/** Admin detail retains estimates and service prices before a manual quote. */
+export function presentAdminOrderDetail(row: OrderRow, parts: DetailParts): OrderDetailView {
+  return OrderDetail.parse({
+    ...presentOrder(row, { shopName: parts.shop.name, viewer: "customer" }),
+    estimatedPrintSatang: row.estimatedPrintSatang,
+    estimatedServicesSatang: row.estimatedServicesSatang,
+    ...presentParts(row, parts, "admin"),
     deliveryRecipientName: row.deliveryRecipientName,
     deliveryRecipientPhone: row.deliveryRecipientPhone,
   });

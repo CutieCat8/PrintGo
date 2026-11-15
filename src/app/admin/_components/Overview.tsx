@@ -19,7 +19,9 @@ export function Overview() {
         <Card>
           <p>สลิปรอตรวจ</p>
           <p className="text-3xl font-bold tabular-nums">{data.pendingPaymentCount}</p>
-          <p className="text-sm text-ink-muted">หน้าตรวจสลิปจะเปิดเร็ว ๆ นี้</p>
+          <Link href="/admin/payments" className="text-brand underline">
+            ตรวจสลิป
+          </Link>
         </Card>
         <Card>
           <p>ร้านทั้งหมด</p>

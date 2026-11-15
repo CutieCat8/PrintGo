@@ -23,3 +23,10 @@ export function useAdminShops() {
     shouldRetryOnError: false,
   });
 }
+
+export async function adminRead(path: string) {
+  return request("GET", `/api/admin/${path}`, { auth: "cookie" });
+}
+export async function adminAction(path: string, body?: unknown) {
+  return request("POST", `/api/admin/${path}`, { auth: "cookie", body });
+}

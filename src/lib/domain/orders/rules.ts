@@ -137,7 +137,7 @@ export const TRANSITIONS: readonly TransitionRule[] = [
     from: ["ready"],
     to: "completed",
     actors: ["shop", "admin"],
-    patchKeys: [],
+    patchKeys: ["rejectReason"],
     fulfillment: "pickup",
     effects: ["set_completed_at"],
     notify: "completed",

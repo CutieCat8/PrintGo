@@ -11,7 +11,8 @@
   mutation ที่ browser ส่งมาจาก origin อื่นถูกปฏิเสธ
 - ชื่อแท็บ = จำนวนร้าน pending + payments pending_review เช่น `(3) PrintGo Admin`
   client poll ทุก 15 วินาที ไม่ใช้ mock API ของหน้าลูกค้า
-- เมนู A4/A6 ที่ยังไม่มีหน้าจอแสดงว่าเร็ว ๆ นี้ ยังไม่พาผู้ใช้ไปหน้า 404
+- เมนู A6 เปิดใช้งานบน branch A6 แล้ว ดูรายละเอียดและข้อค้างใน `A6.md`
+- เมนู A4 ที่ยังไม่มีหน้าจอแสดงว่าเร็ว ๆ นี้
 
 DashboardShell เดิมของยูริผูกเมนูกับร้าน (`/shop`) จึงสร้าง AdminFrame ใต้โฟลเดอร์อาร์ม
 ตามตัวเลือกใน ARM.md โดยใช้ shared UI Button/Card/Badge/Modal/States ของยูริ

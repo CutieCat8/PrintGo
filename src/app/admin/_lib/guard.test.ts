@@ -8,6 +8,7 @@ const h = vi.hoisted(() => ({
     throw new Error("not-found");
   }),
 }));
+vi.mock("next/server", () => ({ connection: async () => {} }));
 vi.mock("next/headers", () => ({ headers: async () => h.incoming }));
 vi.mock("next/navigation", () => ({ redirect: h.redirect, notFound: h.notFound }));
 import { requireAdminPage } from "./guard";
