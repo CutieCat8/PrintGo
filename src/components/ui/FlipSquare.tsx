@@ -8,7 +8,10 @@ import { cx } from "./cx";
  */
 export function FlipSquare({ className }: { className?: string }) {
   return (
-    <span aria-hidden="true" className={cx("inline-flex [perspective:70px]", className)}>
+    <span
+      aria-hidden="true"
+      className={cx("inline-flex translate-y-0.5 [perspective:70px]", className)}
+    >
       <span className="relative size-3 animate-flip-square [transform-style:preserve-3d]">
         <span className="absolute inset-0 rounded-[3px] bg-forest [backface-visibility:hidden]" />
         <span className="absolute inset-0 rounded-[3px] bg-forest-deep [backface-visibility:hidden] [transform:rotateY(180deg)]" />
