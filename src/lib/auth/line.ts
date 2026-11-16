@@ -41,7 +41,12 @@ export async function verifyLiffIdToken(idToken: string): Promise<LineProfile> {
   }
 
   if (res.status === 429 || res.status >= 500) throw new ApiError("INTERNAL", 500);
-  if (!res.ok) throw new ApiError("UNAUTHENTICATED", 401);
+  if (!res.ok) {
+    // Log LINE's reason (e.g. "Invalid IdToken Client ID" = wrong LINE_CHANNEL_ID). Never log the token.
+    const reason = (await res.json().catch(() => null)) as { error_description?: string } | null;
+    console.warn(`LINE verify rejected (${res.status}): ${reason?.error_description ?? "no detail"}`);
+    throw new ApiError("UNAUTHENTICATED", 401);
+  }
 
   const body = (await res.json()) as {
     sub?: string;
