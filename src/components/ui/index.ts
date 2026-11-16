@@ -15,6 +15,7 @@ export { Input, Select, Textarea, type SelectOption } from "./Field";
 export { Modal, Sheet, type ModalProps } from "./Modal";
 export { FlipSquare } from "./FlipSquare";
 export { SwappingDots } from "./SwappingDots";
+export { WatchSpinner } from "./WatchSpinner";
 export { TimePicker } from "./TimePicker";
 export { Money } from "./Money";
 export { PageShell } from "./PageShell";
