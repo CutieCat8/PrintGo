@@ -64,7 +64,7 @@ function HoursForm({
                 </label>
               </div>
               <TimePicker
-                className="ml-4"
+                className="ml-8"
                 label={`เวลาเปิด ${days[row.weekday]}`}
                 disabled={row.isClosed}
                 value={row.openTime}
