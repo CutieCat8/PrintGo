@@ -394,3 +394,48 @@ describe("extra cases from review", () => {
     expect(getFeeRate({ PLATFORM_FEE_RATE: "0.0725" })).toBe(0.0725);
   });
 });
+
+describe("page selection (pageRange)", () => {
+  it("bills only the selected pages: 7 of 12 pages x 2 copies = 14 printed pages", () => {
+    const e = run({ files: [file({ pageCount: 12, pageRange: "1-3, 5, 8-10", copies: 2 })] });
+    expect(e.perFile).toEqual([{ filePrice: 14 * 100, pages: 14 }]);
+    expect(e.estimatedPrintSatang).toBe(1400);
+    expect(e.totalPages).toBe(14);
+  });
+
+  it("no range, null or empty text means every page", () => {
+    for (const pageRange of [undefined, null, ""]) {
+      const e = run({ files: [file({ pageCount: 12, pageRange })] });
+      expect(e.totalPages).toBe(12);
+    }
+  });
+
+  it("the volume-discount trigger uses the pages that are printed, not the pages in the file", () => {
+    const tiers = [{ minPages: 100 }];
+    const all = run({ files: [file({ pageCount: 120 })], tiers });
+    expect(all.requiresManualPrice).toBe(true);
+    const some = run({ files: [file({ pageCount: 120, pageRange: "1-10" })], tiers });
+    expect(some.requiresManualPrice).toBe(false);
+  });
+
+  it.each(["0", "13", "5-3", "1-13", "abc", "1,,x", "-1", "1e1"])(
+    "rejects the bad range %j with a 422 naming the file",
+    (pageRange) => {
+      try {
+        run({ files: [file(), file({ pageCount: 12, pageRange })] });
+        throw new Error("should have thrown");
+      } catch (err) {
+        expect(err).toBeInstanceOf(ApiError);
+        expect((err as ApiError).status).toBe(422);
+        expect((err as ApiError).details).toMatchObject({ fileIndex: 1, field: "pageRange" });
+      }
+    },
+  );
+
+  it("two files: ranges are per file", () => {
+    const e = run({
+      files: [file({ pageCount: 12, pageRange: "1-3" }), file({ pageCount: 30, pageRange: "1-5" })],
+    });
+    expect(e.totalPages).toBe(8);
+  });
+});

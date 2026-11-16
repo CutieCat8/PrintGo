@@ -1,5 +1,6 @@
 "use client";
 
+import { selectedPageCount } from "@/lib/pages";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -156,8 +157,11 @@ export default function SummaryPage() {
                     <div className="min-w-0">
                       <p className="truncate font-medium">{f.name}</p>
                       <p className="text-sm text-ink-muted">
-                        {f.paper} · {COLOR_LABEL[f.color]} · {SIDES_LABEL[f.sides]} · {f.pageCount}{" "}
-                        หน้า × {f.copies} ชุด
+                        {f.paper} · {COLOR_LABEL[f.color]} · {SIDES_LABEL[f.sides]} ·{" "}
+                        {f.pageRange
+                          ? `หน้า ${f.pageRange.replace(/,/g, ", ")} (${selectedPageCount(f.pageRange, f.pageCount ?? 0)} จาก ${f.pageCount} หน้า)`
+                          : `${f.pageCount} หน้า`}{" "}
+                        × {f.copies} ชุด
                       </p>
                     </div>
                   </li>

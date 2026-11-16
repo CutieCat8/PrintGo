@@ -8,6 +8,7 @@ import { errorMessage } from "@/lib/client/api";
 import { filesReady, useDraft, type DraftFile, type OrderDraft } from "@/lib/client/draft";
 import { useShops } from "@/lib/client/hooks";
 import { positionOf, useLocation } from "@/lib/client/location";
+import { selectedPageCount } from "@/lib/pages";
 import type { ShopListItem } from "@/lib/client/types";
 
 /** Every file is uploaded and has a usable page count (enough to set up printing). */
@@ -20,9 +21,12 @@ export function filesUploaded(d: OrderDraft): boolean {
   );
 }
 
-/** Printed pages of one file: pages × copies. (Display only; prices come from the API.) */
+/** Pages printed for ONE copy: the selected pages, or every page. */
+export const pagesPerCopy = (f: DraftFile) => selectedPageCount(f.pageRange, f.pageCount ?? 0);
+
+/** Printed pages of one file: selected pages × copies. (Display only; prices come from the API.) */
 export const printedPages = (f: DraftFile) =>
-  (f.pageCount ?? 0) * (Number.isInteger(f.copies) ? f.copies : 0);
+  pagesPerCopy(f) * (Number.isInteger(f.copies) ? f.copies : 0);
 
 /**
  * Set right before the order is sent: the draft is then cleared on purpose and the guard must

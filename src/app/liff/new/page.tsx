@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { Button, Icon, Input, PageShell, Steps, cx, useToast } from "@/components/ui";
@@ -12,7 +13,8 @@ import {
   formatBytes,
   uploadToSignedUrl,
 } from "@/lib/client/files";
-import { FlowFooter, filesUploaded } from "../_components/OrderFlow";
+import { selectedPageCount } from "@/lib/pages";
+import { FlowFooter, filesUploaded, pagesPerCopy } from "../_components/OrderFlow";
 import { ORDER_STEPS } from "../_components/steps";
 
 /** File contents live here only while the page is open (needed to retry an upload). */
@@ -73,7 +75,7 @@ export default function UploadPage() {
 
   const ready = filesUploaded(draft);
   const full = draft.files.length >= FILE_RULES.maxFiles;
-  const totalPages = draft.files.reduce((n, f) => n + (f.pageCount ?? 0), 0);
+  const totalPages = draft.files.reduce((n, f) => n + pagesPerCopy(f), 0);
 
   function addFiles(list: FileList | null) {
     if (!list || list.length === 0) return;
@@ -99,6 +101,7 @@ export default function UploadPage() {
         pageCount: null,
         pageWarning: null,
         counting: true,
+        pageRange: null,
         color: first?.color ?? "bw",
         paper: first?.paper ?? "A4",
         sides: first?.sides ?? "single",
@@ -321,6 +324,24 @@ function FileRow({
           <Icon name="x" className="size-5" />
         </button>
       </div>
+      {f.upload === "done" && f.pageCount !== null && f.pageCount > 1 && (
+        <div className="mt-3 flex justify-end border-t border-line pt-3">
+          <Link
+            href={`/liff/new/pages?file=${encodeURIComponent(f.key)}`}
+            className={cx(
+              "inline-flex min-h-10 items-center gap-1 rounded-full px-4 text-sm font-semibold ring-1 transition",
+              f.pageRange
+                ? "bg-accent-50 text-accent-ink ring-accent/40"
+                : "bg-canvas text-ink ring-line hover:ring-ink/40",
+            )}
+          >
+            {f.pageRange
+              ? `พิมพ์ ${selectedPageCount(f.pageRange, f.pageCount)} จาก ${f.pageCount} หน้า`
+              : "ทุกหน้า"}
+            <Icon name="next" className="size-4" />
+          </Link>
+        </div>
+      )}
       {needPages && (
         <div className="mt-3 border-t border-line pt-3">
           <p className="mb-2 flex gap-1.5 text-sm text-warning-ink" role="note">
@@ -339,6 +360,7 @@ function FileRow({
             onChange={(e) =>
               updateFile(f.key, {
                 pageCount: e.target.value === "" ? null : Math.trunc(Number(e.target.value)),
+                pageRange: null, // the old selection no longer fits a new page count
               })
             }
           />

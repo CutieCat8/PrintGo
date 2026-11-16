@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import {
@@ -16,7 +17,7 @@ import {
 import { filesReady, updateDraft, type DraftFile } from "@/lib/client/draft";
 import { COLOR_LABEL, PAPER_LABEL, SIDES_LABEL } from "@/lib/client/format";
 import type { ColorMode, Paper, Sides } from "@/lib/db/types";
-import { FlowFooter, printedPages, useFlowGuard } from "../../_components/OrderFlow";
+import { FlowFooter, pagesPerCopy, printedPages, useFlowGuard } from "../../_components/OrderFlow";
 import { ORDER_STEPS } from "../../_components/steps";
 
 type Setting = Pick<DraftFile, "color" | "paper" | "sides" | "copies">;
@@ -104,7 +105,7 @@ export default function SettingsPage() {
             </div>
           )}
 
-          <div className="flex items-center gap-3 rounded-card bg-surface p-3.5 ring-1 ring-line">
+          <div className="flex items-center gap-3 rounded-card bg-accent-50 p-3.5 ring-1 ring-line">
             <span
               aria-hidden="true"
               className="flex h-12 w-10 shrink-0 items-center justify-center rounded-lg bg-canvas text-ink-muted"
@@ -116,8 +117,25 @@ export default function SettingsPage() {
             </span>
             <div className="min-w-0">
               <p className="truncate font-semibold">{current.name}</p>
-              <p className="text-sm text-ink-muted">พิมพ์ทั้งหมด {current.pageCount} หน้า</p>
+              <p className="text-sm font-medium text-ink">
+                {current.pageRange
+                  ? `พิมพ์ ${pagesPerCopy(current)} จาก ${current.pageCount} หน้า`
+                  : `พิมพ์ทั้งหมด ${current.pageCount} หน้า`}
+              </p>
+              {current.pageRange && (
+                <p className="text-sm text-ink-muted">
+                  หน้า {current.pageRange.replace(/,/g, ", ")}
+                </p>
+              )}
             </div>
+            {(current.pageCount ?? 0) > 1 && (
+              <Link
+                href={`/liff/new/pages?file=${encodeURIComponent(current.key)}`}
+                className="ml-auto shrink-0 text-sm font-semibold text-accent-ink underline"
+              >
+                แก้ไข
+              </Link>
+            )}
           </div>
 
           <Segmented<ColorMode>
@@ -165,7 +183,7 @@ export default function SettingsPage() {
 
           <p className="flex items-center gap-2 rounded-card bg-brand-50 px-4 py-3 text-sm font-medium text-brand">
             <Icon name="printer" className="size-4 shrink-0" />
-            {current.pageCount} หน้า × {current.copies || 0} ชุด ={" "}
+            {pagesPerCopy(current)} หน้า × {current.copies || 0} ชุด ={" "}
             <b className="font-display text-base italic">{printedPages(current)} หน้าพิมพ์</b>
             {current.sides === "double" && (
               <span className="text-brand/70">

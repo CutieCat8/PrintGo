@@ -139,6 +139,8 @@ export const OrderFileRow = z.object({
   mime: z.string(),
   sizeBytes: z.number().int().nonnegative(),
   pageCount: z.number().int().positive(),
+  /** Pages to print, canonical "1-3,5,8-10"; null = every page. */
+  pageRange: z.string().nullable().default(null),
   color: ColorMode,
   paper: Paper,
   sides: Sides,
@@ -262,6 +264,7 @@ export const OrderFile = OrderFileRow.pick({
   mime: true,
   sizeBytes: true,
   pageCount: true,
+  pageRange: true,
   color: true,
   paper: true,
   sides: true,

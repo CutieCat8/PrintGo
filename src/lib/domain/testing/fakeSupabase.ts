@@ -50,7 +50,7 @@ const NULLABLE_DEFAULTS: Record<string, string[]> = {
     "completed_at",
     "handed_over_at",
   ],
-  order_files: ["deleted_at"],
+  order_files: ["deleted_at", "page_range"],
   messages: ["read_at", "push_sent_at"],
   push_subscriptions: ["user_agent", "last_success_at"],
 };

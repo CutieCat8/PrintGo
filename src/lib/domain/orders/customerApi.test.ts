@@ -378,6 +378,31 @@ describe("POST /api/liff/orders: success", () => {
     expect(json.responseDeadline).toBe(new Date(NOW.getTime() + 15 * 60_000).toISOString());
   });
 
+  it("page selection: stores the canonical range and bills only the selected pages", async () => {
+    // fileBody(1) is 10 pages; select 1-3 and 5 -> 4 pages x 1 copy
+    const picked = { ...fileBody(1), pageRange: "5, 1-3, 2" };
+    const full = await (await create(orderBody())).json();
+    const res = await create(orderBody({ files: [{ ...picked, path: fileBody(2).path }] }));
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    const [, stored] = db.rows("order_files");
+    expect(stored).toMatchObject({ page_count: 10, page_range: "1-3,5" });
+    expect(json.estimatedPrintSatang).toBeLessThan(full.estimatedPrintSatang);
+    expect(json.estimatedPrintSatang * 10).toBe(full.estimatedPrintSatang * 4);
+  });
+
+  it("page selection: selecting every page is stored as null; a bad range is a 422 and nothing is created", async () => {
+    const all = await create(orderBody({ files: [{ ...fileBody(1), pageRange: "1-10" }] }));
+    expect(all.status).toBe(200);
+    expect(db.rows("order_files")[0].page_range).toBeNull();
+    const before = db.rows("orders").length;
+    for (const pageRange of ["0", "11", "9-3", "x", "1-11"]) {
+      const bad = await create(orderBody({ files: [{ ...fileBody(2), pageRange }] }));
+      expect(bad.status).toBe(422);
+    }
+    expect(db.rows("orders")).toHaveLength(before);
+  });
+
   it("stores the order, its file (final path, display name) and moves the file into the order folder", async () => {
     const json = await (await create(orderBody())).json();
     const [row] = db.rows("orders");
@@ -968,6 +993,7 @@ describe("GET /api/liff/orders/:id", () => {
         mime: "application/pdf",
         sizeBytes: 5000,
         pageCount: 10,
+        pageRange: null,
         color: "bw",
         paper: "A4",
         sides: "single",
