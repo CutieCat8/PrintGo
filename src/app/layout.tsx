@@ -1,13 +1,6 @@
 import type { Metadata, Viewport } from "next";
-import { Noto_Sans_Thai } from "next/font/google";
+import { displayFont } from "@/components/ui/fonts";
 import "./globals.css";
-
-const notoThai = Noto_Sans_Thai({
-  subsets: ["thai", "latin"],
-  weight: ["400", "500", "600", "700"],
-  display: "swap",
-  variable: "--font-noto-thai",
-});
 
 export const metadata: Metadata = {
   title: "PrintGo",
@@ -17,12 +10,12 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#12284c",
+  themeColor: "#ffffff",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="th" className={notoThai.variable}>
+    <html lang="th" className={displayFont.variable}>
       <body className="min-h-dvh bg-canvas font-sans text-ink antialiased">{children}</body>
     </html>
   );

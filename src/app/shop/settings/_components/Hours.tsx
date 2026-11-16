@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { Button, Card, Input, useToast } from "@/components/ui";
+import { Button, Card, TimePicker, useToast } from "@/components/ui";
 import { api } from "@/lib/client/api";
 import type { ShopHour } from "@/lib/client/types";
 import { copyHours, hoursBody, hoursDraft } from "../_lib/forms";
@@ -63,24 +63,21 @@ function HoursForm({
                   ปิดทั้งวัน
                 </label>
               </div>
-              <Input
-                className="min-w-0"
+              <TimePicker
+                className="ml-[45px]"
                 label={`เวลาเปิด ${days[row.weekday]}`}
-                type="time"
                 disabled={row.isClosed}
                 value={row.openTime}
                 error={errors[`${index}.openTime`]}
-                onChange={(event) => update(index, { openTime: event.target.value })}
+                onChange={(openTime) => update(index, { openTime })}
               />
-              <Input
-                className="min-w-0"
+              <TimePicker
                 label={`เวลาปิด ${days[row.weekday]}`}
-                inputMode="numeric"
-                placeholder="18:00 หรือ 24:00"
+                allow24
                 disabled={row.isClosed}
                 value={row.closeTime}
                 error={errors[`${index}.closeTime`]}
-                onChange={(event) => update(index, { closeTime: event.target.value })}
+                onChange={(closeTime) => update(index, { closeTime })}
               />
               <Button
                 variant="secondary"

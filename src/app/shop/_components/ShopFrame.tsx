@@ -352,7 +352,7 @@ function PauseSwitch() {
       onClick={toggle}
       className={cx(
         "flex min-h-11 items-center gap-2 rounded-full px-3 text-sm font-medium ring-1 disabled:opacity-60",
-        open ? "bg-white text-brand ring-white" : "bg-warning-50 text-warning-ink ring-amber-300",
+        open ? "bg-brand-50 text-ink ring-line-strong" : "bg-warning-50 text-warning-ink ring-amber-300",
       )}
     >
       <span

@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { Logo } from "@/components/ui";
 import { LoginForm } from "./login-form";
 
 export default function LoginPage() {
@@ -6,10 +7,8 @@ export default function LoginPage() {
     <main className="flex min-h-dvh items-center justify-center bg-canvas p-4">
       <div className="flex w-full max-w-sm flex-col gap-6">
         <div className="text-center">
-          <p className="text-3xl font-bold text-brand">
-            Print<span className="text-accent">Go</span>
-          </p>
-          <p className="text-sm text-ink-muted">สำหรับร้านปริ้น</p>
+          <Logo size="lg" />
+          <p className="mt-1 text-sm text-ink-muted">สำหรับร้านปริ้น</p>
         </div>
         <section className="rounded-card bg-surface p-6 shadow-card ring-1 ring-line">
           <h1 className="text-xl font-semibold text-brand">เข้าสู่ระบบ / สมัครร้านค้า</h1>

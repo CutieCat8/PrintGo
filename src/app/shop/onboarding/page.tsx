@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useSWRConfig } from "swr";
-import { Button, Card, Checkbox, Input, Textarea, useToast } from "@/components/ui";
+import { Button, Card, Checkbox, Input, Logo, Textarea, useToast } from "@/components/ui";
 import { api, errorMessage, isApiClientError } from "@/lib/client/api";
 import { isThaiPhone } from "@/lib/client/format";
 
@@ -87,8 +87,8 @@ export default function OnboardingPage() {
   return (
     <main className="mx-auto flex min-h-dvh max-w-lg flex-col justify-center gap-4 p-4">
       <div>
-        <p className="text-xl font-bold text-brand">
-          Print<span className="text-accent">Go</span>{" "}
+        <p className="flex items-center gap-2 text-xl text-brand">
+          <Logo size="md" />
           <span className="font-normal">สำหรับร้าน</span>
         </p>
         <h1 className="mt-2 text-2xl font-semibold text-brand">สมัครร้านปริ้น</h1>

@@ -8,7 +8,7 @@ export type ButtonSize = "sm" | "md" | "lg";
 
 const VARIANTS: Record<ButtonVariant, string> = {
   primary:
-    "bg-zoom text-white shadow-glow hover:brightness-110 active:scale-[0.98] disabled:shadow-none",
+    "bg-brand text-white hover:bg-brand-700 active:scale-[0.98]",
   secondary:
     "bg-surface text-ink ring-1 ring-inset ring-line-strong hover:ring-ink/40 active:scale-[0.98]",
   ghost: "bg-transparent text-brand hover:bg-brand-50",
@@ -19,7 +19,7 @@ const VARIANTS: Record<ButtonVariant, string> = {
 const SIZES: Record<ButtonSize, string> = {
   sm: "min-h-9 px-3.5 text-sm",
   md: "min-h-12 px-5 text-base",
-  lg: "min-h-14 px-6 font-display text-lg italic tracking-wide",
+  lg: "min-h-14 px-6 text-lg",
 };
 
 type StyleOptions = {
@@ -37,7 +37,7 @@ export function buttonClasses({
   className,
 }: StyleOptions = {}) {
   return cx(
-    "group/btn inline-flex items-center justify-center gap-2 rounded-full font-semibold transition duration-150 select-none",
+    "group/btn inline-flex items-center justify-center gap-2 rounded-control font-semibold transition duration-150 select-none",
     "disabled:cursor-not-allowed disabled:opacity-50 aria-disabled:cursor-not-allowed aria-disabled:opacity-50",
     VARIANTS[variant],
     SIZES[size],

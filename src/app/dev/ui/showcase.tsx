@@ -21,6 +21,7 @@ import {
   SkeletonCard,
   StatusBadge,
   Textarea,
+  TimePicker,
   Timeline,
   ToastProvider,
   buttonClasses,
@@ -79,6 +80,8 @@ function Gallery() {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [color, setColor] = useState("bw");
   const [busy, setBusy] = useState(false);
+  const [openAt, setOpenAt] = useState("09:00");
+  const [closeAt, setCloseAt] = useState("");
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-4 px-4 py-6">
@@ -103,8 +106,8 @@ function Gallery() {
       <Section id="colors" title="สีธีม">
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           {[
-            ["bg-brand text-white", "brand #12284C"],
-            ["bg-accent text-brand", "accent #F26B21"],
+            ["bg-brand text-white", "brand (ink) #1A1815"],
+            ["bg-accent text-white", "accent (teal) #0F766E"],
             ["bg-accent-ink text-white", "accent-ink (ปุ่ม)"],
             ["bg-canvas text-ink ring-1 ring-line", "canvas (พื้นหน้า)"],
             ["bg-surface text-ink ring-1 ring-line", "surface (การ์ด)"],
@@ -221,6 +224,17 @@ function Gallery() {
             ))}
           </Row>
         </div>
+      </Section>
+
+      <Section id="time" title="TimePicker (เวลาเปิด–ปิด)">
+        <div className="flex flex-wrap items-start gap-6">
+          <TimePicker label="เวลาเปิด" value={openAt} onChange={setOpenAt} />
+          <TimePicker label="เวลาปิด (24:00 ได้)" value={closeAt} onChange={setCloseAt} allow24 />
+          <TimePicker label="ปิดใช้งาน" value="12:00" onChange={() => {}} disabled />
+        </div>
+        <p className="mt-3 text-sm text-ink-muted">
+          ค่าที่เลือก: เปิด {openAt || "-"} · ปิด {closeAt || "-"}
+        </p>
       </Section>
 
       <Section id="money" title="Money (รับค่าเป็นสตางค์)">

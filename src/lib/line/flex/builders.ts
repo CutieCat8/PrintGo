@@ -28,8 +28,8 @@ export type NotifyData = {
   now: Date;
 };
 
-const NAVY = "#12284C";
-const ORANGE = "#F26B21";
+const NAVY = "#1A1815"; // ink (name kept)
+const ORANGE = "#0F766E"; // accent teal (name kept)
 const MUTED = "#6B7280";
 const CHAT_PREVIEW_CHARS = 60;
 
