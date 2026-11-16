@@ -47,7 +47,12 @@ async function start(): Promise<LiffState> {
     // loop forever: log out locally first so LINE issues a fresh one.
     if (!liff.isLoggedIn() || idTokenExpired(liff)) {
       if (!reloginAllowed()) {
-        return { kind: "error", message: "เข้าสู่ระบบ LINE ไม่สำเร็จ กรุณาปิดแล้วเปิดใหม่อีกครั้ง" };
+        const why = describeToken(liff);
+        console.error("LIFF sign-in did not produce a usable ID token", why);
+        return {
+          kind: "error",
+          message: `เข้าสู่ระบบ LINE ไม่สำเร็จ กรุณาปิดแล้วเปิดใหม่อีกครั้ง (${why})`,
+        };
       }
       relogin(liff);
       return { kind: "redirecting" };
@@ -74,6 +79,17 @@ type Liff = (typeof import("@line/liff"))["default"];
 function idTokenExpired(liff: Liff): boolean {
   const exp = liff.getDecodedIDToken()?.exp;
   return !exp || exp * 1000 < Date.now() + 30_000;
+}
+
+/** Short, secret-free hint for support: never includes the token itself. */
+function describeToken(liff: Liff): string {
+  const exp = liff.getDecodedIDToken()?.exp;
+  return [
+    `loggedIn=${liff.isLoggedIn()}`,
+    `idToken=${liff.getIDToken() ? "yes" : "no"}`,
+    `expIn=${exp ? Math.round(exp - Date.now() / 1000) : "none"}s`,
+    `inClient=${liff.isInClient()}`,
+  ].join(" ");
 }
 
 function relogin(liff: Liff) {
