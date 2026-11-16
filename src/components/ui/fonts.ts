@@ -1,13 +1,13 @@
-import { Noto_Serif_Thai } from "next/font/google";
+import { Google_Sans } from "next/font/google";
 
 /**
- * Display face for headings, prices and big numbers: Noto Serif Thai gives the calm, printed
- * look of the wireframes. Body text is IBM Plex Sans Thai from the root layout.
- * Apply `displayFont.variable` on a wrapper; use the `font-display` class.
+ * The one typeface of the app: Google Sans, the face of the Gemini chat, with Thai glyphs.
+ * Used for body text, headings and prices (headings only differ by weight).
+ * Apply `displayFont.variable` on a wrapper (the root layout does); use `font-sans` / `font-display`.
  */
-export const displayFont = Noto_Serif_Thai({
+export const displayFont = Google_Sans({
   subsets: ["thai", "latin"],
-  weight: ["500", "600", "700"],
+  weight: ["400", "500", "600", "700"],
   display: "swap",
-  variable: "--font-serif-thai",
+  variable: "--font-google-sans",
 });

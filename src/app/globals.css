@@ -5,8 +5,8 @@
  * Light only on purpose: LINE's dark mode must not hide text, so every page sets its own light background.
  */
 @theme inline {
-  --font-sans: var(--font-plex-thai), ui-sans-serif, system-ui, sans-serif;
-  --font-display: var(--font-serif-thai), var(--font-plex-thai), ui-serif, serif;
+  --font-sans: var(--font-google-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-google-sans), ui-sans-serif, system-ui, sans-serif;
 }
 
 @theme {
