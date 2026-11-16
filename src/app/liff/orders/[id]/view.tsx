@@ -13,6 +13,7 @@ import {
   PageShell,
   SkeletonCard,
   StatusBadge,
+  SwappingDots,
   Timeline,
   buttonClasses,
   cx,
@@ -287,7 +288,10 @@ function StatusHero({
       <div className="flex flex-col gap-3">
         {left !== null && (
           <div className="flex items-center justify-between rounded-card bg-race px-5 py-4 text-white">
-            <span className="text-sm text-white/80">ชำระภายใน</span>
+            <span className="flex items-center gap-3 text-sm text-white/80">
+              <SwappingDots className="text-white" />
+              ชำระภายใน
+            </span>
             <span
               className={cx(
                 "font-display text-3xl font-bold tabular-nums italic",
@@ -308,7 +312,8 @@ function StatusHero({
           </Card>
         )}
         {slipInReview && (
-          <p className="rounded-card bg-info-50 px-4 py-3 text-sm text-info-ink">
+          <p className="flex items-center gap-3 rounded-card bg-info-50 px-4 py-3 text-sm text-info-ink">
+            <SwappingDots />
             ได้รับสลิปแล้ว กำลังตรวจสอบการชำระเงิน
           </p>
         )}
@@ -425,8 +430,7 @@ function StatusHero({
         <div className="rounded-card bg-surface px-5 py-5 ring-2 ring-success-ink">
           <p className="font-semibold text-success-ink">ร้านส่งมอบงานให้คุณแล้ว</p>
           <p className="mt-1 text-sm text-ink-muted">
-            ตรวจงานให้เรียบร้อย ถ้าไม่มีปัญหากดยืนยันรับของได้เลย หากไม่กด
-            ระบบจะยืนยันให้เองใน{" "}
+            ตรวจงานให้เรียบร้อย ถ้าไม่มีปัญหากดยืนยันรับของได้เลย หากไม่กด ระบบจะยืนยันให้เองใน{" "}
             <span className="font-semibold tabular-nums">
               {formatCountdown(confirmEndsAt - now.getTime())}
             </span>{" "}

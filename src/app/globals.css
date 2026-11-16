@@ -65,11 +65,32 @@
   --animate-rise: rise 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) both;
   --animate-zoom: rise 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) both;
   --animate-flip-square: flip-square 2s ease-in-out infinite;
+  --animate-swap-a: swap-a 1.5s ease-in-out infinite;
+  --animate-swap-b: swap-b 1.5s ease-in-out infinite;
 
   @keyframes rise {
     from {
       opacity: 0;
       transform: translateY(6px);
+    }
+  }
+  /* Swapping Dots (after the Amicro one): the dots trade places over 2rem */
+  @keyframes swap-a {
+    0%,
+    100% {
+      transform: translateX(0);
+    }
+    50% {
+      transform: translateX(2rem);
+    }
+  }
+  @keyframes swap-b {
+    0%,
+    100% {
+      transform: translateX(0);
+    }
+    50% {
+      transform: translateX(-2rem);
     }
   }
   /* Flip Square (after the Amicro one): flips over X then Y; ends on the same pose it starts, so the loop has no jump */
