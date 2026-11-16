@@ -26,7 +26,10 @@ export async function requireCustomer(req: Request) {
   if (dev) return { customerId: dev.id, lineUserId: `dev-line-${dev.id}` };
 
   const token = bearerToken(req);
-  if (!token) throw new ApiError("UNAUTHENTICATED", 401);
+  if (!token) {
+    console.warn("Customer API call without ID token (LIFF scope 'openid' missing, or not logged in)");
+    throw new ApiError("UNAUTHENTICATED", 401);
+  }
   const line = await verifyLiffIdToken(token);
   const customer = await upsertCustomer(line);
   return { customerId: customer.id, lineUserId: line.lineUserId };
