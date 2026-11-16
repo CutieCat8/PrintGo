@@ -150,7 +150,7 @@ export function TimePicker({
   );
 }
 
-/** One scrolling column. The chosen row is centred when the panel opens; fades at the edges. */
+/** One scrolling column. Starts at the top; the chosen row is scrolled into view when the panel opens; fades at the bottom (and at the top once scrolled). */
 function Column({
   title,
   options,
@@ -163,6 +163,7 @@ function Column({
   onPick: (value: string) => void;
 }) {
   const list = useRef<HTMLDivElement>(null);
+  const [scrolled, setScrolled] = useState(false);
 
   // Centre the selected row once, on open (not on every pick, so the list does not jump under a finger)
   useEffect(() => {
@@ -195,7 +196,13 @@ function Column({
         aria-label={title}
         tabIndex={0}
         onKeyDown={onKey}
-        className="h-52 snap-y overflow-y-auto overscroll-contain py-[4.5rem] outline-none [mask-image:linear-gradient(to_bottom,transparent,black_22%,black_78%,transparent)] [scrollbar-width:none] focus-visible:bg-brand-50/60 [&::-webkit-scrollbar]:hidden"
+        onScroll={(e) => setScrolled(e.currentTarget.scrollTop > 4)}
+        className={cx(
+          "h-52 overflow-y-auto overscroll-contain outline-none [scrollbar-width:none] focus-visible:bg-brand-50/60 [&::-webkit-scrollbar]:hidden",
+          scrolled
+            ? "[mask-image:linear-gradient(to_bottom,transparent,black_18%,black_78%,transparent)]"
+            : "[mask-image:linear-gradient(to_bottom,black_78%,transparent)]",
+        )}
       >
         {options.map((o) => {
           const on = o === selected;
@@ -210,7 +217,7 @@ function Column({
               onClick={() => onPick(o)}
               className={cx(
                 ROW,
-                "block w-full snap-center text-center text-base tabular-nums transition-colors",
+                "block w-full text-center text-base tabular-nums transition-colors",
                 on ? "font-semibold text-ink" : "text-ink-muted hover:text-ink",
               )}
             >
