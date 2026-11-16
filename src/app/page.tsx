@@ -1,14 +1,12 @@
 import Link from "next/link";
-import { buttonClasses } from "@/components/ui";
+import { Logo, buttonClasses } from "@/components/ui";
 
 /** Public landing: customers order inside LINE; shops sign in here. */
 export default function Home() {
   return (
     <main className="flex min-h-dvh flex-col items-center justify-center gap-8 bg-canvas p-6 text-center">
       <div>
-        <p className="text-5xl font-bold text-brand">
-          Print<span className="text-accent">Go</span>
-        </p>
+        <Logo size="lg" className="text-5xl" />
         <p className="mt-3 text-lg text-ink-muted">Your file goes in. Your print comes home.</p>
         <p className="mt-1 text-ink-muted">
           ส่งไฟล์ เลือกร้าน รับงานเอง หรือให้ไรเดอร์ไปส่ง ผ่าน LINE
