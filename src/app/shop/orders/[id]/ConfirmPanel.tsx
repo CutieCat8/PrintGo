@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import useSWR from "swr";
-import { Button, Card, Input, Textarea, cx } from "@/components/ui";
+import { Button, Card, Input, Money, Textarea, cx } from "@/components/ui";
 import { api } from "@/lib/client/api";
 import {
   bangkokDate,
@@ -13,7 +13,7 @@ import {
   formatMinutes,
   nextBangkokDate,
 } from "@/lib/client/format";
-import { parseBahtToSatang } from "@/lib/client/money";
+import { formatBaht, parseBahtToSatang, satangToBahtInput } from "@/lib/client/money";
 import type { ConfirmOrderBody, OrderDetail } from "@/lib/db/types";
 import type { ShopHour } from "@/lib/client/types";
 
@@ -237,11 +237,18 @@ export function ConfirmPanel({
         </p>
       )}
       <div className="mt-3 flex flex-col gap-4">
+        <SystemEstimate order={o} onUse={(satang) => setPriceText(satangToBahtInput(satang))} />
         <Input
           label="ราคาที่ร้านยืนยัน (บาท) — ค่าปริ้นรวมบริการเสริม"
           inputMode="decimal"
           required={manual}
-          placeholder={manual ? "เช่น 250" : "เว้นว่าง = ใช้ราคาประเมินของระบบ"}
+          placeholder={
+            manual
+              ? "เช่น 250"
+              : estimateTotal(o) !== null
+                ? `เว้นว่าง = ใช้ราคาประเมิน ฿${formatBaht(estimateTotal(o)!)}`
+                : "เว้นว่าง = ใช้ราคาประเมินของระบบ"
+          }
           value={priceText}
           error={touched || priceText ? priceError : undefined}
           onChange={(e) => setPriceText(e.target.value)}
@@ -272,5 +279,69 @@ export function ConfirmPanel({
         )}
       </div>
     </Card>
+  );
+}
+
+/** The system's print + services estimate (what is used when the shop leaves the price empty). */
+function estimateTotal(o: OrderDetail): number | null {
+  if (o.estimatedPrintSatang === null || o.estimatedServicesSatang === null) return null;
+  return o.estimatedPrintSatang + o.estimatedServicesSatang;
+}
+
+/** What the app estimated, so the shop can confirm it or change it knowingly. */
+function SystemEstimate({
+  order: o,
+  onUse,
+}: {
+  order: OrderDetail;
+  onUse: (satang: number) => void;
+}) {
+  const total = estimateTotal(o);
+  return (
+    <section
+      aria-label="ราคาประเมินของระบบ"
+      className="rounded-control bg-brand-50 px-3 py-3 text-sm text-brand"
+    >
+      <p className="font-semibold">ราคาประเมินของระบบ</p>
+      {total === null ? (
+        <p className="mt-1">
+          ประเมินไม่ได้ (ส่วนลดตามปริมาณหรือบริการราคาตามตกลง) กรุณากำหนดราคาเอง
+        </p>
+      ) : (
+        <>
+          <dl className="mt-2 flex flex-col gap-1">
+            <div className="flex justify-between gap-3">
+              <dt>ค่าปริ้น</dt>
+              <dd>
+                <Money satang={o.estimatedPrintSatang!} />
+              </dd>
+            </div>
+            {o.services.map((s) => (
+              <div key={s.id} className="flex justify-between gap-3">
+                <dt className="min-w-0 truncate">+ {s.name}</dt>
+                <dd>
+                  {s.lineTotalSatang === null ? "ตามตกลง" : <Money satang={s.lineTotalSatang} />}
+                </dd>
+              </div>
+            ))}
+            <div className="mt-1 flex justify-between gap-3 border-t border-brand/20 pt-2 text-base font-semibold">
+              <dt>รวม (ไม่รวมค่าบริการแพลตฟอร์ม)</dt>
+              <dd>
+                <Money satang={total} />
+              </dd>
+            </div>
+          </dl>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            className="mt-3"
+            onClick={() => onUse(total)}
+          >
+            ใช้ราคานี้
+          </Button>
+        </>
+      )}
+    </section>
   );
 }
