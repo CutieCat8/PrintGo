@@ -1,7 +1,7 @@
 "use client";
 import { useContext, useEffect, useRef, useState } from "react";
 import useSWR from "swr";
-import { Button, Card, Money } from "@/components/ui";
+import { Button, Card, Icon, Money, cx } from "@/components/ui";
 import { errorMessage } from "@/lib/client/api";
 import { PaymentTransportContext } from "./transport";
 import { countdown, PAID_STATUSES, secondsLeft, slipFileProblem } from "./helpers";
@@ -154,7 +154,17 @@ function Panel({ orderId, amountSatang, deadline, onVerified }: PaymentPanelProp
             <p role="status">ออเดอร์นี้ไม่สามารถรับชำระเพิ่มได้ กรุณาตรวจสอบสถานะออเดอร์</p>
           ) : (
             <>
-              <p className="text-sm text-ink-muted">1. สแกนจ่าย → 2. แคปสลิป → 3. อัปโหลดที่นี่</p>
+              <ol className="space-y-1.5 rounded-control bg-brand-50 px-4 py-3 text-sm">
+                <li>
+                  <b>1.</b> สแกน QR ด้านบนด้วยแอปธนาคารเพื่อโอนเงิน
+                </li>
+                <li>
+                  <b>2.</b> แคปหน้าจอสลิปการโอนเก็บไว้
+                </li>
+                <li>
+                  <b>3.</b> แตะ <b>“อัปโหลดสลิป”</b> ด้านล่าง เลือกรูปสลิป แล้วกดส่ง
+                </li>
+              </ol>
               {rejected && (
                 <p role="alert">
                   {order.data?.payment?.rejectReason ??
@@ -162,13 +172,29 @@ function Panel({ orderId, amountSatang, deadline, onVerified }: PaymentPanelProp
                     "สลิปไม่ผ่าน กรุณาตรวจสอบแล้วส่งใหม่"}
                 </p>
               )}
-              <label className="block text-sm font-medium">
-                เลือกรูปสลิป (JPEG/PNG ไม่เกิน 5 MB)
+              <label
+                className={cx(
+                  "flex min-h-32 cursor-pointer flex-col items-center justify-center gap-1.5 rounded-card border-2 border-dashed px-4 py-6 text-center transition",
+                  "has-[:focus-visible]:border-accent-ink has-[:focus-visible]:ring-3 has-[:focus-visible]:ring-accent-ink/40",
+                  file
+                    ? "border-line-strong bg-surface text-ink-muted"
+                    : "border-ink bg-brand-50 text-ink hover:bg-brand-100",
+                  (busy || !charge.data || !!charge.error || !!order.error) &&
+                    "cursor-not-allowed opacity-50",
+                )}
+              >
+                <Icon name="upload" className="size-8" />
+                <span className="text-lg font-semibold">
+                  {file ? "เปลี่ยนรูปสลิป" : "อัปโหลดสลิป"}
+                </span>
+                <span className="text-sm text-ink-muted">
+                  แตะที่นี่เพื่อเลือกรูปสลิปจากเครื่อง · JPEG/PNG ไม่เกิน 5 MB
+                </span>
                 <input
                   type="file"
                   accept="image/jpeg,image/png"
                   disabled={busy || !charge.data || !!charge.error || !!order.error}
-                  className="mt-2 block w-full min-w-0 text-sm"
+                  className="sr-only"
                   onChange={(event) => {
                     const selected = event.target.files?.[0];
                     event.target.value = "";
@@ -218,6 +244,7 @@ function Panel({ orderId, amountSatang, deadline, onVerified }: PaymentPanelProp
               )}
               <Button
                 fullWidth
+                size="lg"
                 loading={busy}
                 disabled={
                   !file || !charge.data || !!charge.error || !!order.error || order.isLoading
@@ -226,6 +253,11 @@ function Panel({ orderId, amountSatang, deadline, onVerified }: PaymentPanelProp
               >
                 ส่งสลิปเพื่อตรวจสอบ
               </Button>
+              {!file && (
+                <p className="text-center text-sm text-ink-muted">
+                  เลือกรูปสลิปก่อน แล้วปุ่มนี้จะกดได้
+                </p>
+              )}
             </>
           )}
           {message && !rejected && <p role="alert">{message}</p>}
