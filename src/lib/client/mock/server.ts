@@ -170,7 +170,21 @@ function unreadFor(orderId: string, side: Side) {
   ).length;
 }
 
+/** Same 10-minute rule as the real API (expire.ts): a handed-over pickup order is confirmed automatically. */
+const HANDOVER_CONFIRM_MS = 10 * 60_000;
+function autoReceive(o: MockOrder) {
+  if (
+    o.status === "ready" &&
+    o.fulfillment === "pickup" &&
+    o.handedOverAt &&
+    Date.now() - Date.parse(o.handedOverAt) >= HANDOVER_CONFIRM_MS
+  ) {
+    move(o, ["ready"], "completed", { completedAt: nowIso() });
+  }
+}
+
 function toOrder(o: MockOrder, side: Side): Order {
+  autoReceive(o);
   const hidePrice = side === "customer" && o.requiresManualPrice && o.status === "submitted";
   const showCode =
     side === "customer" &&
@@ -198,6 +212,7 @@ function toOrder(o: MockOrder, side: Side): Order {
     readyInMinutes: o.readyInMinutes,
     estimatedReadyAt: o.estimatedReadyAt,
     readyNote: o.readyNote,
+    handedOverAt: o.handedOverAt,
     unreadMessageCount: unreadFor(o.id, side),
     createdAt: o.createdAt,
     updatedAt: o.updatedAt,
@@ -568,6 +583,7 @@ export const mockApi: Api = {
       pickupCode: null,
       paidAt: null,
       completedAt: null,
+      handedOverAt: null,
       createdAt: stamp,
       updatedAt: stamp,
       files,
@@ -592,6 +608,17 @@ export const mockApi: Api = {
   async getMyOrder(id) {
     await gate();
     return toDetail(myCustomerOrder(id), "customer");
+  },
+
+  async receiveMyOrder(id) {
+    await gate();
+    const o = myCustomerOrder(id);
+    autoReceive(o);
+    if (o.status === "ready") {
+      if (o.fulfillment !== "pickup" || !o.handedOverAt) fail("ORDER_INVALID_TRANSITION");
+      move(o, ["ready"], "completed", { completedAt: nowIso() });
+    } else if (o.status !== "completed") fail("ORDER_INVALID_TRANSITION");
+    return toOrder(o, "customer");
   },
 
   async cancelMyOrder(id) {
@@ -834,17 +861,36 @@ export const mockApi: Api = {
     return toOrder(o, "shop");
   },
 
-  async completePickup(id, pickupCode) {
+  async handOverPickup(id) {
     await gate();
     const o = myShopOrder(id);
-    if (o.fulfillment !== "pickup") fail("ORDER_INVALID_TRANSITION");
-    if (o.codeAttempts >= 5) fail("RATE_LIMITED");
-    if (o.status === "ready" && pickupCode.trim() !== o.pickupCode) {
-      o.codeAttempts += 1;
-      fail("VALIDATION_ERROR", "รหัสรับงานไม่ถูกต้อง");
-    }
-    move(o, ["ready"], "completed", { completedAt: nowIso() });
+    if (o.status !== "ready" || o.fulfillment !== "pickup") fail("ORDER_INVALID_TRANSITION");
+    o.handedOverAt ??= nowIso();
     return toOrder(o, "shop");
+  },
+
+  async getShopEarnings() {
+    await gate();
+    const mine = store().orders.filter((o) => o.shopId === store().myShopId && o.status === "completed");
+    const dayStart = new Date().setHours(0, 0, 0, 0);
+    const items = mine
+      .filter((o) => o.completedAt && o.printSubtotalSatang)
+      .map((o) => ({
+        orderId: o.id,
+        orderNo: o.orderNo,
+        amountSatang: o.printSubtotalSatang!,
+        completedAt: o.completedAt!,
+        status: "pending" as const,
+      }))
+      .sort((a, b) => b.completedAt.localeCompare(a.completedAt));
+    const today = items.filter((i) => Date.parse(i.completedAt) >= dayStart);
+    return {
+      todayTotalSatang: today.reduce((n, i) => n + i.amountSatang, 0),
+      todayCount: today.length,
+      pendingSatang: items.reduce((n, i) => n + i.amountSatang, 0),
+      paidSatang: 0,
+      items,
+    };
   },
 
   async listShopMessages(orderId, after) {

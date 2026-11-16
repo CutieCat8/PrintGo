@@ -185,6 +185,24 @@ export type ChatList = z.infer<typeof ChatList>;
 export type FileUrl = z.infer<typeof FileUrl>;
 export type ShopHour = z.infer<typeof ShopHour>;
 export type ShopPricing = z.infer<typeof ShopPricing>;
+
+/** GET /api/shop/earnings (money in satang). Only completed orders count. */
+export const ShopEarnings = z.object({
+  todayTotalSatang: satang,
+  todayCount: z.number().int().nonnegative(),
+  pendingSatang: satang,
+  paidSatang: satang,
+  items: z.array(
+    z.object({
+      orderId: z.string(),
+      orderNo: z.string(),
+      amountSatang: satang,
+      completedAt: z.string(),
+      status: z.enum(["pending", "paid"]),
+    }),
+  ),
+});
+export type ShopEarnings = z.infer<typeof ShopEarnings>;
 export type Charge = z.infer<typeof Charge>;
 export type SlipResult = z.infer<typeof SlipResult>;
 export type SlipSign = z.infer<typeof SlipSign>;

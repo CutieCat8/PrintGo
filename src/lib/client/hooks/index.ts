@@ -83,6 +83,14 @@ export function useShopOrders(statuses?: OrderStatus[], enabled = true) {
   );
 }
 
+/** What the shop earned today and what PrintGo still has to transfer; refreshed every 15 s. */
+export function useShopEarnings(enabled = true) {
+  return useSWR(enabled ? "shopEarnings" : null, () => api.getShopEarnings(), {
+    ...base,
+    refreshInterval: 15_000,
+  });
+}
+
 // --- chat ------------------------------------------------------------------------------------
 
 /** Messages of one order, refreshed every 4 s. Stops polling once `closed` is true. */

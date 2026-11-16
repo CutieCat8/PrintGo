@@ -47,7 +47,7 @@ ServiceUnit   = per_set | per_order
 | `shop_pricing_rules` | `shop_id`, `color ColorMode`, `paper Paper`, `sides Sides`, `price_per_page_satang int` · unique(shop_id,color,paper,sides) |
 | `shop_discount_tiers` | `shop_id`, `min_pages int`, `note text null` · ถ้า "จำนวนหน้ารวมทั้งออเดอร์ (คูณจำนวนชุด)" ≥ `min_pages` ของ tier ใด → ต้องกรอกราคาเอง |
 | `shop_services` | `shop_id`, `name text` (1–60 ตัวอักษร), `price_satang int null` (null = "ราคาตามตกลง"; ถ้ามีค่าต้อง > 0), `unit ServiceUnit` (`per_set` = คิดต่อชุดของไฟล์ที่เลือก · `per_order` = คิดครั้งเดียวต่อออเดอร์), `is_active bool default true`, `sort_order int default 0` · ไม่เกิน 20 รายการต่อร้าน (API ตรวจ) · D22 |
-| `orders` | `order_no text unique` (รูปแบบ `PG-` + เลข 4 หลักวิ่ง), `customer_id`, `shop_id`, `status OrderStatus default 'submitted'`, `fulfillment Fulfillment`, `delivery_address text null`, `delivery_lat float8 null`, `delivery_lng float8 null`, `delivery_recipient_name text null`, `delivery_recipient_phone text null` (บังคับเมื่อ `fulfillment=delivery`; ส่งให้ลูกค้าเจ้าของและแอดมินเท่านั้น **ร้านไม่เห็น**), `customer_note text null`, `requires_manual_price bool`, `estimated_print_satang int null` (ค่าปริ้นล้วน), `estimated_services_satang int null` (บริการเสริมที่มีราคา; ตั้งตอนสร้างออเดอร์เสมอ เป็น 0 ถ้าไม่เลือกบริการ), `print_subtotal_satang int null` (ร้านยืนยัน; **= ค่าปริ้น + บริการเสริม**), `platform_fee_satang int null`, `delivery_fee_satang int default 0`, `total_satang int null`, `reject_reason text null`, `response_deadline timestamptz`, `payment_deadline timestamptz null`, `ready_in_minutes int null` (ร้านเลือกแบบ "นับจากตอนชำระเงิน"), `estimated_ready_at timestamptz null` (เวลาเสร็จประมาณ; ตั้งตรงตอนยืนยันแบบเวลาตายตัว หรือคำนวณตอน `paid`), `ready_note text null` (≤ 200 ตัวอักษร), `pickup_code text null` (ตัวเลข 4 หลัก 1000–9999 เช่น `4821` ไม่มีตัวอักษร จึงไม่สับสนกับเลขออเดอร์ `PG-0012`; สร้างโดยระบบตอน `paid` ทุกออเดอร์; ไม่ซ้ำกับออเดอร์ที่ยังไม่จบของร้านเดียวกัน; ส่งให้ลูกค้าเฉพาะ `fulfillment=pickup`; **ร้านไม่เห็น**), `paid_at`, `completed_at`, `updated_at` |
+| `orders` | `order_no text unique` (รูปแบบ `PG-` + เลข 4 หลักวิ่ง), `customer_id`, `shop_id`, `status OrderStatus default 'submitted'`, `fulfillment Fulfillment`, `delivery_address text null`, `delivery_lat float8 null`, `delivery_lng float8 null`, `delivery_recipient_name text null`, `delivery_recipient_phone text null` (บังคับเมื่อ `fulfillment=delivery`; ส่งให้ลูกค้าเจ้าของและแอดมินเท่านั้น **ร้านไม่เห็น**), `customer_note text null`, `requires_manual_price bool`, `estimated_print_satang int null` (ค่าปริ้นล้วน), `estimated_services_satang int null` (บริการเสริมที่มีราคา; ตั้งตอนสร้างออเดอร์เสมอ เป็น 0 ถ้าไม่เลือกบริการ), `print_subtotal_satang int null` (ร้านยืนยัน; **= ค่าปริ้น + บริการเสริม**), `platform_fee_satang int null`, `delivery_fee_satang int default 0`, `total_satang int null`, `reject_reason text null`, `response_deadline timestamptz`, `payment_deadline timestamptz null`, `ready_in_minutes int null` (ร้านเลือกแบบ "นับจากตอนชำระเงิน"), `estimated_ready_at timestamptz null` (เวลาเสร็จประมาณ; ตั้งตรงตอนยืนยันแบบเวลาตายตัว หรือคำนวณตอน `paid`), `ready_note text null` (≤ 200 ตัวอักษร), `pickup_code text null` (ตัวเลข 4 หลัก 1000–9999 เช่น `4821` ไม่มีตัวอักษร จึงไม่สับสนกับเลขออเดอร์ `PG-0012`; สร้างโดยระบบตอน `paid` ทุกออเดอร์; ไม่ซ้ำกับออเดอร์ที่ยังไม่จบของร้านเดียวกัน; ส่งให้ลูกค้าเฉพาะ `fulfillment=pickup`; **ร้านไม่เห็น**), `paid_at`, `completed_at`, `handed_over_at` (timestamptz null; pickup: เวลาที่ร้านส่งมอบ ลูกค้ามี 10 นาทีให้ยืนยัน), `updated_at` |
 | `order_files` | `order_id`, `storage_path text`, `original_name text`, `mime text`, `size_bytes int`, `page_count int`, `color color ColorMode`, `paper Paper`, `sides Sides`, `copies int default 1`, `deleted_at timestamptz null` |
 | `order_services` | `order_id`, `shop_service_id uuid null` (→ `shop_services` on delete set null), `name text`, `unit ServiceUnit`, `unit_price_satang int null`, `order_file_id uuid null` (บังคับเมื่อ `per_set`; null เมื่อ `per_order`), `quantity int` (`per_set` = `copies` ของไฟล์นั้นตอนสั่ง; `per_order` = 1) · **snapshot ชื่อ/ราคา ณ ตอนสั่ง** ร้านแก้ทีหลังไม่กระทบออเดอร์เก่า · `per_set` หนึ่งแถวต่อ (บริการ, ไฟล์) |
 | `payments` | `order_id`, `amount_satang int`, `status PaymentStatus default 'pending'`, `slip_path text null`, `slip_ref text null unique` (เลขอ้างอิงในสลิป), `verified_by PaymentVerifier null`, `verified_at null`, `reject_reason text null` |
@@ -74,8 +74,8 @@ Storage bucket: `order-files` (private) · `payment-slips` (private) · `settlem
 | `paid` | `printing` | ร้าน | notify `printing` |
 | `paid`,`printing`,`ready`,`courier_requested`,`in_transit` | `cancelled` | แอดมินเท่านั้น (ลูกค้ายกเลิกหลังจ่ายเองไม่ได้ — D19) | สร้าง `refunds` pending (`amount` = `refundSatang` ที่แอดมินระบุ ไม่เกิน `total_satang` ไม่ระบุ = คืนเต็ม) → notify `order_cancelled` · ใช้กับกรณีไรเดอร์ล้มเหลว/ลูกค้าไม่มารับ ฯลฯ |
 | `paid`,`printing` | `rejected` | ร้าน (กรณีเปิดไฟล์ไม่ได้ ฯลฯ) | ต้องมีเหตุผล + สร้าง `refunds` pending → notify `order_rejected` |
-| `printing` | `ready` | ร้าน | notify `ready` (ถ้า pickup แสดง `pickup_code`) |
-| `ready` | `completed` | ร้าน (กรอกรหัสรับงานถูกต้อง) หรือแอดมิน (ปิดงานเองเมื่อลูกค้าไม่มารับ/มีข้อโต้แย้ง) | เฉพาะ `fulfillment=pickup` → ตั้ง `completed_at` |
+| `printing` | `ready` | ร้าน | notify `ready` (pickup: บอกให้แจ้งเลขออเดอร์กับร้าน ไม่ส่งรหัส) |
+| `ready` | `completed` | ลูกค้า (กดรับของหลังร้านส่งมอบ) · ระบบ (ครบ 10 นาทีหลังส่งมอบโดยลูกค้าไม่กด) · แอดมิน (ปิดงานเองเมื่อมีข้อโต้แย้ง ต้องใส่เหตุผล) | เฉพาะ `fulfillment=pickup` → ตั้ง `completed_at` · ร้านส่งมอบด้วย `POST /api/shop/orders/:id/handover` (บันทึก `handed_over_at` ไม่เปลี่ยนสถานะ) |
 | `ready` | `courier_requested` | ระบบ (ทันทีหลังร้านกด mark-ready ของออเดอร์ delivery) หรือแอดมิน | เฉพาะ `fulfillment=delivery` → `createDeliveryForOrder()` → notify |
 | `courier_requested` | `in_transit` | ระบบ/แอดมิน | |
 | `in_transit` | `completed` | ระบบ/แอดมิน | ตั้ง `completed_at` |
@@ -113,6 +113,7 @@ shopPayout        = printSubtotal                                          // �
 | `GET /api/liff/orders` | – | `Order[]` ของฉัน ใหม่→เก่า |
 | `GET /api/liff/orders/:id` | – | `OrderDetail` (รวม files, services, payment, delivery, shop ย่อ) |
 | `POST /api/liff/orders/:id/cancel` | – | `Order` |
+| `POST /api/liff/orders/:id/receive` | – (เฉพาะ pickup `ready` ที่ร้านส่งมอบแล้ว; ไม่งั้น 409) | `Order` (`completed`) |
 | `GET /api/liff/orders/:id/messages` | `?after=<iso>` | `Message[]` |
 | `POST /api/liff/orders/:id/messages` | `{ body }` (≤ 1000 ตัวอักษร) · ออเดอร์สถานะปลายทาง → `CHAT_CLOSED` | `Message` |
 | `POST /api/liff/orders/:id/messages/read` | – (ตั้ง `read_at` ให้ข้อความจากร้านที่ยังไม่อ่านทั้งหมดของออเดอร์นี้) | `{ unreadMessageCount: 0 }` |
@@ -130,7 +131,7 @@ shopPayout        = printSubtotal                                          // �
 | `POST /api/shop/orders/:id/reject` | `{ reason }` | `Order` |
 | `POST /api/shop/orders/:id/start-printing` | – | `Order` |
 | `POST /api/shop/orders/:id/mark-ready` | – | `Order` |
-| `POST /api/shop/orders/:id/complete` | `{ pickupCode }` (ตัดช่องว่าง; ต้องตรงกับ `pickup_code`; ผิดเกิน 5 ครั้ง/10 นาที → `RATE_LIMITED`) | `Order` (เฉพาะ pickup) |
+| `POST /api/shop/orders/:id/handover` | – (ลูกค้าบอกเลขออเดอร์ที่หน้าร้าน; ไม่มีรหัสรับงาน) | `Order` (เฉพาะ pickup `ready`; สถานะยังเป็น `ready`, มี `handedOverAt`) |
 | `GET/POST /api/shop/orders/:id/messages` | เหมือนฝั่งลูกค้า (sender=shop) · `CHAT_CLOSED` เมื่อออเดอร์จบ | |
 | `POST /api/shop/orders/:id/messages/read` | – (ตั้ง `read_at` ให้ข้อความจากลูกค้า) | `{ unreadMessageCount: 0 }` |
 | `POST /api/shop/push/subscribe` | `{ endpoint, keys:{ p256dh, auth } }` (จาก `PushSubscription.toJSON()`; upsert ตาม `endpoint`) | `{ ok: true }` |
@@ -169,7 +170,7 @@ Order = { id, orderNo, status, fulfillment, shopId, shopName, customerNote|null,
   requiresManualPrice, estimatedPrintSatang|null, estimatedServicesSatang|null, printSubtotalSatang|null, platformFeeSatang|null,
   deliveryFeeSatang, totalSatang|null, rejectReason|null, responseDeadline, paymentDeadline|null,
   pickupCode|null /* ส่งเฉพาะฝั่งลูกค้า เมื่อ fulfillment=pickup และสถานะ paid|printing|ready */,
-  readyInMinutes|null, estimatedReadyAt|null, readyNote|null,
+  readyInMinutes|null, estimatedReadyAt|null, readyNote|null, handedOverAt|null /* pickup: ร้านส่งมอบเมื่อไร */,
   unreadMessageCount /* จำนวนข้อความจากอีกฝ่ายที่ผู้เรียกยังไม่อ่าน */, createdAt, updatedAt }
 OrderDetail = Order & { files: OrderFile[], services: OrderService[], payment: Payment|null, delivery: Delivery|null,
   deliveryAddress|null, deliveryRecipientName|null, deliveryRecipientPhone|null /* ไม่ส่งให้ร้าน */,
@@ -207,7 +208,7 @@ notify(orderId: string, event: NotifyEvent): Promise<void>
 // notifyShop (ซี) src/lib/push/notifyShop.ts — Web Push ไปเครื่องของร้าน (แม้ไม่ได้เปิดหน้า dashboard) · D17
 notifyShop(shopId: string, event: 'order_new'|'chat_message', ref: { orderId: string; orderNo: string }): Promise<void>  // ห้ามโยน error ออกนอกฟังก์ชัน; ลบ subscription ที่หมดอายุ
 NotifyEvent = 'quote_ready'|'order_rejected'|'order_expired'|'order_cancelled'|'payment_verified'
-            |'payment_rejected'|'printing'|'ready'|'courier_requested'|'in_transit'|'completed'|'chat_message'|'eta_changed'
+            |'payment_rejected'|'printing'|'ready'|'courier_requested'|'in_transit'|'handed_over'|'completed'|'chat_message'|'eta_changed'
 
 // payment (อาร์ม)  src/lib/payment
 interface PaymentProvider {

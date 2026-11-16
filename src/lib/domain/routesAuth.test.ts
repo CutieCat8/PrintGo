@@ -126,6 +126,7 @@ describe("API routes of liff, shop and cron", () => {
     expect(writers).toEqual([
       "src/lib/domain/orders/create.ts:insert", // a new order, status "submitted"
       "src/lib/domain/orders/shop.ts:update", // the ready time (never the status)
+      "src/lib/domain/orders/shop.ts:update", // the pickup hand-over time (never the status)
       "src/lib/domain/orders/transition.ts:update", // every status change
     ]);
   });

@@ -7,6 +7,7 @@ import { errorMessage } from "@/lib/client/api";
 import { etaText, formatCountdown, formatTime } from "@/lib/client/format";
 import { useNow, useShopMe, useShopOrders } from "@/lib/client/hooks";
 import type { Order, OrderStatus } from "@/lib/db/types";
+import { EarningsCard } from "./_components/EarningsCard";
 
 const COLUMNS: { key: string; title: string; statuses: OrderStatus[]; hot?: boolean }[] = [
   { key: "new", title: "ออเดอร์ใหม่", statuses: ["submitted"], hot: true },
@@ -72,6 +73,7 @@ export default function ShopQueuePage() {
 
   return (
     <div className="flex flex-col gap-6">
+      <EarningsCard />
       <div className="-mx-4 overflow-x-auto px-4 pb-2 lg:mx-0 lg:px-0">
         <div className="grid min-w-[1050px] grid-cols-5 gap-3">
           {COLUMNS.map((col) => {

@@ -9,8 +9,8 @@ import type { NotifyEvent } from "../notify";
  * No database, no network, no clock of their own (`now` is passed in): the same input always gives
  * the same message, so they are covered by plain tests.
  *
- * Privacy: `pickupCode` appears only in `payment_verified` / `ready` of a PICKUP order, and the
- * message is pushed to the order's own customer only (notify.ts). Money is shown through formatBaht.
+ * Privacy: the pickup code is no longer sent (pickup works by telling the shop the order number),
+ * and the message is pushed to the order's own customer only (notify.ts). Money is shown through formatBaht.
  */
 
 export type NotifyData = {
@@ -165,13 +165,9 @@ export function buildNotifyMessage(event: NotifyEvent, d: NotifyData): LineMessa
     case "payment_verified": {
       const lines = ["ร้านได้รับการชำระเงินแล้ว ขอบคุณค่ะ/ครับ"];
       if (eta) lines.push(eta);
-      const rows: Row[] =
-        isPickup && order.pickupCode
-          ? [{ label: "รหัสรับงาน", value: order.pickupCode, bold: true }]
-          : [];
       return flex(
         `ชำระเงินออเดอร์ ${no} สำเร็จ`,
-        bubble({ title: `ชำระเงินแล้ว ${no}`, lines, rows, buttons: [view] }),
+        bubble({ title: `ชำระเงินแล้ว ${no}`, lines, buttons: [view] }),
       );
     }
 
@@ -240,15 +236,11 @@ export function buildNotifyMessage(event: NotifyEvent, d: NotifyData): LineMessa
 
     case "ready": {
       if (isPickup) {
-        const rows: Row[] = order.pickupCode
-          ? [{ label: "รหัสรับงาน", value: order.pickupCode, bold: true }]
-          : [];
         return flex(
           `ออเดอร์ ${no} พร้อมรับแล้วที่ ${d.shopName}`,
           bubble({
             title: `พร้อมรับแล้ว ${no}`,
-            lines: [`รับที่ ${d.shopName}`, d.shopAddress, "แจ้งรหัสรับงานกับร้าน"],
-            rows,
+            lines: [`รับที่ ${d.shopName}`, d.shopAddress, `แจ้งเลขออเดอร์ ${no} กับร้านตอนมารับ`],
             buttons: [view],
           }),
         );
@@ -287,6 +279,19 @@ export function buildNotifyMessage(event: NotifyEvent, d: NotifyData): LineMessa
         }),
       );
     }
+
+    case "handed_over":
+      return flex(
+        `ร้านส่งมอบออเดอร์ ${no} แล้ว กรุณากดยืนยันรับของ`,
+        bubble({
+          title: `ร้านส่งมอบงานแล้ว ${no}`,
+          lines: [
+            "กรุณาตรวจงานให้เรียบร้อย แล้วกดยืนยันรับของ",
+            "ถ้าไม่กดภายใน 10 นาที ระบบจะถือว่าคุณรับของแล้ว",
+          ],
+          buttons: [{ ...view, label: "ตรวจงานและยืนยัน" }],
+        }),
+      );
 
     case "completed":
       return flex(

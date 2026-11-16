@@ -740,7 +740,7 @@ describe("completion and delivery", () => {
       orderId: a.id as string,
       from: "ready",
       to: "completed",
-      actor: "shop",
+      actor: "customer",
     });
     expect(ra.completedAt).toBe(NOW.toISOString());
     const b = seed({ status: "in_transit", fulfillment: "delivery" });

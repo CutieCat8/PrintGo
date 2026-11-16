@@ -103,3 +103,37 @@ export async function cancelCustomerOrder(customerId: string, orderId: string): 
     unreadMessageCount: await unreadCount(db, updated.id, "customer"),
   });
 }
+
+/**
+ * POST /api/liff/orders/:id/receive: the customer confirms they got a pickup order. Only after the
+ * shop handed it over (`handed_over_at`); before that the customer cannot close the order from
+ * home. If the customer does not answer within 10 minutes the system confirms (expire.ts).
+ */
+export async function receiveCustomerOrder(customerId: string, orderId: string): Promise<OrderView> {
+  const db = getServiceClient();
+  const own = await expireIfDue(await readOwnOrder(db, customerId, orderId));
+  let updated = own;
+  if (own.status === "ready") {
+    if (own.fulfillment !== "pickup" || own.handedOverAt === null) {
+      throw new ApiError("ORDER_INVALID_TRANSITION", 409, undefined, {
+        currentStatus: own.status,
+      });
+    }
+    try {
+      updated = await transition({ orderId: own.id, from: "ready", to: "completed", actor: "customer" });
+    } catch (err) {
+      // The system confirmed it at the same moment: answer with the fresh row instead of an error.
+      if (!(err instanceof ApiError) || err.code !== "ORDER_INVALID_TRANSITION") throw err;
+      updated = await readOwnOrder(db, customerId, orderId);
+      if (updated.status !== "completed") throw err;
+    }
+  } else if (own.status !== "completed") {
+    throw new ApiError("ORDER_INVALID_TRANSITION", 409, undefined, { currentStatus: own.status });
+  }
+  const shop = await readShop(db, updated.shopId);
+  return presentOrder(updated, {
+    shopName: shop.name,
+    viewer: "customer",
+    unreadMessageCount: await unreadCount(db, updated.id, "customer"),
+  });
+}

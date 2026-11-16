@@ -111,8 +111,10 @@ function OrderCard({ order: o, now }: { order: Order; now: Date }) {
   const line =
     o.status === "awaiting_payment" && o.paymentDeadline
       ? `ชำระก่อน ${formatTime(o.paymentDeadline)}`
-      : o.status === "ready" && o.pickupCode
-        ? `รหัสรับงาน ${o.pickupCode.split("").join(" ")}`
+      : o.status === "ready" && o.fulfillment === "pickup"
+        ? o.handedOverAt
+          ? "ร้านส่งมอบแล้ว · กดยืนยันรับของ"
+          : `พร้อมรับที่ร้าน · แจ้งเลข ${o.orderNo}`
         : o.status === "submitted"
           ? "รอร้านยืนยันราคา"
           : (etaText(o, now) ?? formatDayTime(o.createdAt, now));

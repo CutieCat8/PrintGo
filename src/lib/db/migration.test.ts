@@ -36,6 +36,13 @@ const sqlTables = new Map<string, string[]>(
   ]),
 );
 
+// Later migrations may add a column: `alter table public.t add column [if not exists] name ...;`
+for (const m of sql.matchAll(
+  /alter table public\.(\w+) add column (?:if not exists )?(\w+)/gi,
+)) {
+  sqlTables.get(m[1])?.push(m[2]);
+}
+
 const sqlEnumName = (contractName: string) =>
   columnName(contractName[0].toLowerCase() + contractName.slice(1));
 

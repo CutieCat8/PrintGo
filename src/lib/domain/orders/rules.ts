@@ -133,10 +133,12 @@ export const TRANSITIONS: readonly TransitionRule[] = [
     notify: "ready",
   },
   {
-    // The shop typing the right pickup code is checked by the shop API (P6) before calling this.
+    // Pickup hand-over: the shop only marks `handed_over_at` (shop API); the CUSTOMER confirms
+    // receipt, or the system does after 10 minutes without an answer (expire.ts). Both paths check
+    // that the shop handed over first. An admin can still close it, and must give a reason.
     from: ["ready"],
     to: "completed",
-    actors: ["shop", "admin"],
+    actors: ["customer", "system", "admin"],
     patchKeys: ["rejectReason"],
     fulfillment: "pickup",
     effects: ["set_completed_at"],

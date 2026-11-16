@@ -21,6 +21,7 @@ import type {
   ShopHour,
   ShopListItem,
   ShopPricing,
+  ShopEarnings,
   ShopProfileRequest,
   ShopServiceCreateRequest,
   ShopServiceUpdateRequest,
@@ -51,6 +52,7 @@ export const realApi = {
     request<Order>("POST", "/api/liff/orders", { ...liff, body }),
   listMyOrders: () => request<Order[]>("GET", "/api/liff/orders", liff),
   getMyOrder: (id: string) => request<OrderDetail>("GET", `/api/liff/orders/${enc(id)}`, liff),
+  receiveMyOrder: (id: string) => request<Order>("POST", `/api/liff/orders/${enc(id)}/receive`, liff),
   cancelMyOrder: (id: string) => request<Order>("POST", `/api/liff/orders/${enc(id)}/cancel`, liff),
   listMyMessages: (orderId: string, after?: string) =>
     request<Message[]>("GET", `/api/liff/orders/${enc(orderId)}/messages`, {
@@ -112,11 +114,9 @@ export const realApi = {
   startPrinting: (id: string) =>
     request<Order>("POST", `/api/shop/orders/${enc(id)}/start-printing`, shop),
   markReady: (id: string) => request<Order>("POST", `/api/shop/orders/${enc(id)}/mark-ready`, shop),
-  completePickup: (id: string, pickupCode: string) =>
-    request<Order>("POST", `/api/shop/orders/${enc(id)}/complete`, {
-      ...shop,
-      body: { pickupCode },
-    }),
+  handOverPickup: (id: string) =>
+    request<Order>("POST", `/api/shop/orders/${enc(id)}/handover`, shop),
+  getShopEarnings: () => request<ShopEarnings>("GET", "/api/shop/earnings", shop),
   listShopMessages: (orderId: string, after?: string) =>
     request<Message[]>("GET", `/api/shop/orders/${enc(orderId)}/messages`, {
       ...shop,

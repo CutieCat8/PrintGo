@@ -24,10 +24,11 @@ import {
   fileSettingsText,
   formatCountdown,
   formatDayTime,
+  formatTime,
 } from "@/lib/client/format";
 import { isTerminal, useNow, useOrder } from "@/lib/client/hooks";
+import { HANDOVER_CONFIRM_MINUTES } from "@/lib/domain/orders/handover";
 import type { ConfirmOrderBody, Order, OrderDetail } from "@/lib/db/types";
-import { CodeBoxes } from "../../_components/CodeBoxes";
 import { ConfirmPanel, EtaPicker, type EtaValue } from "./ConfirmPanel";
 
 const REJECT_REASONS = [
@@ -241,8 +242,6 @@ function NextStep({
   onReject: () => void;
   now: Date;
 }) {
-  const [code, setCode] = useState("");
-  const [codeError, setCodeError] = useState<string | null>(null);
   const [confirmHandover, setConfirmHandover] = useState(false);
   const [etaOpen, setEtaOpen] = useState(false);
 
@@ -327,45 +326,34 @@ function NextStep({
   }
 
   if (o.status === "ready" && o.fulfillment === "pickup") {
-    const valid = /^\d{4}$/.test(code);
+    if (o.handedOverAt) {
+      const confirmBy = new Date(Date.parse(o.handedOverAt) + HANDOVER_CONFIRM_MINUTES * 60_000);
+      return (
+        <Card className="ring-2 ring-success-ink">
+          <p className="font-semibold text-success-ink">ส่งมอบงานแล้ว รอลูกค้ายืนยัน</p>
+          <p className="mt-1 text-sm text-ink-muted">
+            ลูกค้ากดยืนยันรับของได้ หรือระบบจะยืนยันให้เองเวลา {formatTime(confirmBy.toISOString())}{" "}
+            น. แล้วยอดจะเข้ารายได้ของร้าน
+          </p>
+        </Card>
+      );
+    }
     return (
       <Card className="ring-2 ring-success-ink">
         <p className="font-semibold text-success-ink">พร้อมให้ลูกค้ารับ</p>
         <p className="mt-1 text-sm text-ink-muted">
-          ขอรหัสรับงาน 4 หลักจากลูกค้า แล้วกรอกเพื่อส่งมอบ
+          ลูกค้าจะบอกเลขออเดอร์ <span className="font-semibold">{o.orderNo}</span> ที่หน้าร้าน
+          ตรวจให้ตรงกับออเดอร์นี้ แล้วกดส่งมอบ
         </p>
-        <form
-          className="mt-3 flex flex-wrap items-end gap-2"
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (valid) setConfirmHandover(true);
-          }}
-        >
-          <div>
-            <CodeBoxes
-              value={code}
-              invalid={Boolean(codeError)}
-              onChange={(c) => {
-                setCode(c);
-                setCodeError(null);
-              }}
-            />
-            {codeError && (
-              <p role="alert" className="mt-1.5 text-sm font-medium text-danger">
-                {codeError}
-              </p>
-            )}
-          </div>
-          <Button type="submit" size="lg" disabled={!valid || busy}>
-            ยืนยันรับงาน
-          </Button>
-        </form>
+        <Button className="mt-3" size="lg" onClick={() => setConfirmHandover(true)} disabled={busy}>
+          ส่งมอบงานให้ลูกค้าแล้ว
+        </Button>
         <Modal
           open={confirmHandover}
           onClose={() => setConfirmHandover(false)}
           dismissible={!busy}
-          title="ยืนยันส่งมอบงาน?"
-          description="ส่งมอบแล้วย้อนกลับไม่ได้"
+          title={`ส่งมอบออเดอร์ ${o.orderNo}?`}
+          description="ลูกค้าจะได้รับแจ้งให้ตรวจงานและกดยืนยันรับของ ถ้าไม่กดภายใน 10 นาที ระบบจะยืนยันให้"
           footer={
             <>
               <Button variant="secondary" disabled={busy} onClick={() => setConfirmHandover(false)}>
@@ -374,24 +362,8 @@ function NextStep({
               <Button
                 loading={busy}
                 onClick={async () => {
-                  const ok = await act(
-                    () => api.completePickup(o.id, code),
-                    "ส่งมอบงานเรียบร้อย",
-                    (e) => {
-                      // wrong code -> 422; too many tries -> 429 (API.md §5 #17)
-                      if (isApiClientError(e) && e.code === "RATE_LIMITED") {
-                        setCodeError("ใส่รหัสผิดหลายครั้ง ลองใหม่อีกครั้งภายหลัง");
-                        return true;
-                      }
-                      if (isApiClientError(e) && e.code === "VALIDATION_ERROR") {
-                        setCodeError("รหัสไม่ถูกต้อง");
-                        return true;
-                      }
-                      return false;
-                    },
-                  );
+                  await act(() => api.handOverPickup(o.id), "ส่งมอบงานเรียบร้อย");
                   setConfirmHandover(false);
-                  if (ok) setCode("");
                 }}
               >
                 ยืนยันส่งมอบ

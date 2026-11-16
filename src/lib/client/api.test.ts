@@ -190,11 +190,13 @@ describe("mock follows the contract rules", () => {
     expect((await mockApi.markReady(printing.id)).status).toBe("courier_requested");
   });
 
-  it("checks the pickup code and rate-limits guesses", async () => {
+  it("pickup: the customer cannot close it from home; the shop hands over, then the customer confirms", async () => {
     const ready = (await mockApi.listShopOrders(["ready"]))[0];
-    for (let i = 0; i < 5; i++)
-      expect(await code(mockApi.completePickup(ready.id, "0000"))).toBe("VALIDATION_ERROR");
-    expect(await code(mockApi.completePickup(ready.id, "7314"))).toBe("RATE_LIMITED");
+    expect(await code(mockApi.receiveMyOrder(ready.id))).toBe("ORDER_INVALID_TRANSITION");
+    const handed = await mockApi.handOverPickup(ready.id);
+    expect(handed.status).toBe("ready"); // the shop does not close the order itself
+    expect(handed.handedOverAt).not.toBeNull();
+    expect((await mockApi.receiveMyOrder(ready.id)).status).toBe("completed");
   });
 
   it("shop account states from ?mockShop", async () => {
