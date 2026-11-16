@@ -34,3 +34,15 @@ describe("parseBahtToSatang", () => {
     }
   });
 });
+
+describe("satangToBahtInput", () => {
+  it("round-trips through parseBahtToSatang without a float", async () => {
+    const { satangToBahtInput, parseBahtToSatang } = await import("./money");
+    for (const s of [100, 12000, 9950, 5, 1, 99, 10_000_001]) {
+      expect(parseBahtToSatang(satangToBahtInput(s))).toBe(s);
+    }
+    expect(satangToBahtInput(12000)).toBe("120");
+    expect(satangToBahtInput(9950)).toBe("99.50");
+    expect(satangToBahtInput(5)).toBe("0.05");
+  });
+});
