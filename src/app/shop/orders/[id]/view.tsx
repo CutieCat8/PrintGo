@@ -28,6 +28,7 @@ import {
   formatTime,
 } from "@/lib/client/format";
 import { isTerminal, useNow, useOrder } from "@/lib/client/hooks";
+import { printFromUrl } from "@/lib/client/printFile";
 import { HANDOVER_CONFIRM_MINUTES } from "@/lib/domain/orders/handover";
 import type { ConfirmOrderBody, Order, OrderDetail } from "@/lib/db/types";
 import { ConfirmPanel, EtaPicker, type EtaValue } from "./ConfirmPanel";
@@ -412,6 +413,27 @@ function FilesCard({ order: o }: { order: OrderDetail }) {
     }
   }
 
+  /** Opens the browser print dialog for the file (printer, paper and page range are chosen there). */
+  async function print(file: { id: string; pageRange?: string | null }) {
+    setLoading(`${file.id}:print`);
+    try {
+      const { url } = await api.getShopFileUrl(o.id, file.id, "view");
+      const started = await printFromUrl(url);
+      if (!started) {
+        toast("สั่งพิมพ์อัตโนมัติไม่ได้ กด “เปิดดูไฟล์” แล้วกด Ctrl+P ในแท็บนั้น", "info");
+      } else if (file.pageRange) {
+        toast(
+          `ลูกค้าเลือกพิมพ์เฉพาะหน้า ${file.pageRange.replace(/,/g, ", ")} · ตั้งช่วงหน้านี้ในหน้าต่างพิมพ์`,
+          "info",
+        );
+      }
+    } catch (e) {
+      toast(errorMessage(e), "error");
+    } finally {
+      setLoading(null);
+    }
+  }
+
   return (
     <Card>
       <h2 className="text-base font-semibold text-ink">ไฟล์ ({o.files.length})</h2>
@@ -424,10 +446,13 @@ function FilesCard({ order: o }: { order: OrderDetail }) {
                 <p className="truncate font-medium">
                   {i + 1}. {f.originalName}
                 </p>
-                <p className="text-sm text-ink-muted">{fileSettingsText({ ...f, pageRange: null })}</p>
+                <p className="text-sm text-ink-muted">
+                  {fileSettingsText({ ...f, pageRange: null })}
+                </p>
                 {f.pageRange && (
                   <p className="mt-1 text-sm font-semibold text-warning-ink">
-                    ปริ้นเฉพาะหน้า {f.pageRange.replace(/,/g, ", ")} ({selectedPageCount(f.pageRange, f.pageCount)} จาก {f.pageCount} หน้า)
+                    ปริ้นเฉพาะหน้า {f.pageRange.replace(/,/g, ", ")} (
+                    {selectedPageCount(f.pageRange, f.pageCount)} จาก {f.pageCount} หน้า)
                   </p>
                 )}
                 {services.length > 0 && (
@@ -443,7 +468,15 @@ function FilesCard({ order: o }: { order: OrderDetail }) {
                   loading={loading === `${f.id}:view`}
                   onClick={() => open(f.id, "view")}
                 >
-                  เปิดดู/พิมพ์
+                  เปิดดูไฟล์
+                </Button>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  loading={loading === `${f.id}:print`}
+                  onClick={() => print(f)}
+                >
+                  พิมพ์
                 </Button>
                 <Button
                   size="sm"
