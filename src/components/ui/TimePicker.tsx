@@ -5,8 +5,8 @@ import { cx } from "./cx";
 import { hourOptions, joinTime, minuteOptions, splitTime } from "./timeParts";
 
 const selectClass =
-  "min-h-12 w-full appearance-none rounded-control border bg-surface bg-[length:1rem] bg-[right_0.75rem_center] bg-no-repeat " +
-  "pl-4 pr-9 text-base text-ink tabular-nums " +
+  "min-h-11 w-[4.5rem] shrink-0 appearance-none rounded-control border bg-surface bg-[length:0.875rem] bg-[right_0.5rem_center] bg-no-repeat " +
+  "pl-3 pr-7 text-base text-ink tabular-nums " +
   "disabled:cursor-not-allowed disabled:bg-canvas disabled:text-ink-muted " +
   "focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-accent-ink/50 focus-visible:border-accent-ink";
 
@@ -45,7 +45,7 @@ export function TimePicker({
   return (
     <fieldset
       disabled={disabled}
-      className={cx("flex min-w-0 flex-col gap-1.5", className)}
+      className={cx("flex w-fit min-w-0 flex-col gap-1.5", className)}
       aria-describedby={error ? `${id}-error` : undefined}
     >
       <legend className="mb-1.5 text-sm font-medium text-ink">{label}</legend>

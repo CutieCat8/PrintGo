@@ -50,7 +50,7 @@ function HoursForm({
           {draft.map((row, index) => (
             <div
               key={row.weekday}
-              className="grid items-start gap-3 rounded-control border border-line p-3 sm:grid-cols-[100px_minmax(0,1fr)_minmax(0,1fr)_140px]"
+              className="grid items-start gap-3 rounded-control border border-line p-3 sm:grid-cols-[7.5rem_11rem_11rem_auto]"
             >
               <div>
                 <p className="font-semibold">{days[row.weekday]}</p>
