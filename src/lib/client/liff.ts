@@ -42,16 +42,21 @@ async function start(): Promise<LiffState> {
     await liff.init({ liffId: LIFF_ID });
 
     // Works both inside the LINE app and in a normal desktop/mobile browser (LINE web login).
-    if (!liff.isLoggedIn()) {
-      liff.login({ redirectUri: window.location.href });
+    // isLoggedIn() only checks the access token (about 12 h) but the ID token we send to the API
+    // lasts about 1 h. If it is stale, liff.login() alone returns the same stale token and we
+    // loop forever: log out locally first so LINE issues a fresh one.
+    if (!liff.isLoggedIn() || idTokenExpired(liff)) {
+      if (!reloginAllowed()) {
+        return { kind: "error", message: "เข้าสู่ระบบ LINE ไม่สำเร็จ กรุณาปิดแล้วเปิดใหม่อีกครั้ง" };
+      }
+      relogin(liff);
       return { kind: "redirecting" };
     }
 
-    // The ID token lasts about an hour and the SDK does not renew it: log in again when it expires
+    // The SDK does not renew the ID token: log in again when it expires
     setCustomerTokenProvider(() => {
-      const exp = liff.getDecodedIDToken()?.exp;
-      if (exp && exp * 1000 < Date.now() + 30_000) {
-        liff.login({ redirectUri: window.location.href });
+      if (idTokenExpired(liff)) {
+        if (reloginAllowed()) relogin(liff);
         return null;
       }
       return liff.getIDToken();
@@ -62,4 +67,31 @@ async function start(): Promise<LiffState> {
     console.error("LIFF init failed", e);
     return { kind: "error", message: "เปิดระบบ LINE ไม่สำเร็จ กรุณาปิดแล้วเปิดใหม่อีกครั้ง" };
   }
+}
+
+type Liff = (typeof import("@line/liff"))["default"];
+
+function idTokenExpired(liff: Liff): boolean {
+  const exp = liff.getDecodedIDToken()?.exp;
+  return !exp || exp * 1000 < Date.now() + 30_000;
+}
+
+function relogin(liff: Liff) {
+  if (liff.isLoggedIn()) liff.logout(); // clears the stale tokens kept by the SDK
+  liff.login({ redirectUri: window.location.href });
+}
+
+const RELOGIN_KEY = "printgo_liff_relogin_at";
+const RELOGIN_COOLDOWN_MS = 20_000;
+
+/** Stops an endless LINE login loop: at most one automatic login per 20 seconds. */
+function reloginAllowed(): boolean {
+  try {
+    const last = Number(sessionStorage.getItem(RELOGIN_KEY) ?? 0);
+    if (Date.now() - last < RELOGIN_COOLDOWN_MS) return false;
+    sessionStorage.setItem(RELOGIN_KEY, String(Date.now()));
+  } catch {
+    // storage blocked: allow, we cannot guard
+  }
+  return true;
 }
