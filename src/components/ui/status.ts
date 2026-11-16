@@ -29,13 +29,16 @@ export function orderStatusLabel(status: OrderStatus, fulfillment?: Fulfillment)
 
 /** Light background + dark text: every pair is at least 4.5:1. */
 export const TONE_CLASSES: Record<StatusTone, string> = {
-  amber: "bg-amber-100 text-amber-900 ring-amber-300",
-  orange: "bg-accent-100 text-accent-ink-hover ring-accent/40",
-  blue: "bg-info-50 text-info-ink ring-blue-200",
-  navy: "bg-brand-100 text-brand ring-brand-600/30",
-  teal: "bg-teal-100 text-teal-900 ring-teal-300",
-  violet: "bg-violet-100 text-violet-900 ring-violet-300",
-  green: "bg-success-50 text-success-ink ring-green-300",
-  red: "bg-danger-50 text-danger-hover ring-red-300",
-  gray: "bg-gray-100 text-gray-700 ring-gray-300",
+  // needs someone to act
+  amber: "bg-warning-50 text-warning-ink ring-amber-200",
+  orange: "bg-warning-50 text-warning-ink ring-amber-200",
+  // in progress: quiet ink
+  blue: "bg-brand-50 text-brand ring-line-strong",
+  navy: "bg-brand text-white ring-brand",
+  // moving towards the customer: the one accent
+  teal: "bg-accent-50 text-accent-ink-hover ring-accent/30",
+  violet: "bg-accent-50 text-accent-ink-hover ring-accent/30",
+  green: "bg-success-50 text-success-ink ring-green-200",
+  red: "bg-danger-50 text-danger-hover ring-red-200",
+  gray: "bg-brand-50 text-ink-muted ring-line",
 };

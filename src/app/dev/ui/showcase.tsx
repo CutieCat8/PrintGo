@@ -103,8 +103,8 @@ function Gallery() {
       <Section id="colors" title="สีธีม">
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           {[
-            ["bg-brand text-white", "brand #12284C"],
-            ["bg-accent text-brand", "accent #F26B21"],
+            ["bg-brand text-white", "brand (ink) #1A1815"],
+            ["bg-accent text-white", "accent (teal) #0F766E"],
             ["bg-accent-ink text-white", "accent-ink (ปุ่ม)"],
             ["bg-canvas text-ink ring-1 ring-line", "canvas (พื้นหน้า)"],
             ["bg-surface text-ink ring-1 ring-line", "surface (การ์ด)"],

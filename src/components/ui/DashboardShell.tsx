@@ -51,12 +51,12 @@ export function DashboardShell({
 
   return (
     <div className="flex min-h-dvh flex-col bg-canvas">
-      <header className="sticky top-0 z-30 bg-race text-white shadow-raised">
+      <header className="sticky top-0 z-30 border-b border-line bg-white/95 text-ink backdrop-blur">
         <div className="flex min-h-16 flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2 lg:px-6">
           <Link href="/shop" className="flex min-w-0 items-center gap-2.5">
-            <LogoMark className="size-8 shrink-0 rounded-[9px] ring-1 ring-white/30" />
-            <span className="min-w-0 truncate font-display text-lg font-bold italic">
-              PrintGo <span className="text-accent">·</span> {shopName}
+            <LogoMark className="size-8 shrink-0" />
+            <span className="min-w-0 truncate font-display text-lg font-bold">
+              PrintGo <span className="text-ink-subtle">·</span> {shopName}
             </span>
           </Link>
           <nav
@@ -73,8 +73,8 @@ export function DashboardShell({
                   className={cx(
                     "flex min-h-9 items-center gap-1.5 rounded-full px-3.5 text-sm font-semibold transition",
                     active
-                      ? "bg-white text-brand"
-                      : "text-white/85 ring-1 ring-white/25 hover:bg-white/10",
+                      ? "bg-brand text-white"
+                      : "text-ink-muted ring-1 ring-line hover:bg-brand-50 hover:text-ink",
                   )}
                 >
                   <Icon name={item.icon} className="size-4" />
@@ -83,7 +83,7 @@ export function DashboardShell({
                     <span
                       className={cx(
                         "min-w-5 rounded-full px-1.5 text-center text-xs leading-5 font-bold tabular-nums",
-                        active ? "bg-accent-ink text-white" : "bg-accent text-white",
+                        active ? "bg-white text-brand" : "bg-accent-ink text-white",
                       )}
                     >
                       {item.badge > 9 ? "9+" : item.badge}
@@ -102,7 +102,7 @@ export function DashboardShell({
                 type="submit"
                 aria-label="ออกจากระบบ"
                 title="ออกจากระบบ"
-                className="flex size-9 items-center justify-center rounded-full text-white/80 hover:bg-white/10 hover:text-white"
+                className="flex size-9 items-center justify-center rounded-full text-ink-muted hover:bg-brand-50 hover:text-ink"
               >
                 <Icon name="logout" className="size-5" />
               </button>
