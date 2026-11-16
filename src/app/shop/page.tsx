@@ -2,7 +2,16 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { EmptyState, ErrorState, Icon, Money, Skeleton, StatusBadge, cx } from "@/components/ui";
+import {
+  EmptyState,
+  ErrorState,
+  FlipSquare,
+  Icon,
+  Money,
+  Skeleton,
+  StatusBadge,
+  cx,
+} from "@/components/ui";
 import { errorMessage } from "@/lib/client/api";
 import { etaText, formatCountdown, formatTime } from "@/lib/client/format";
 import { useNow, useShopMe, useShopOrders } from "@/lib/client/hooks";
@@ -91,12 +100,7 @@ export default function ShopQueuePage() {
                   id={`col-${col.key}`}
                   className="mb-2.5 flex items-center gap-2 px-1.5 pt-1 font-display text-base font-bold italic"
                 >
-                  {col.hot && items.length > 0 && (
-                    <span className="relative flex size-2.5">
-                      <span className="absolute inset-0 animate-ping rounded-full bg-accent" />
-                      <span className="relative size-2.5 rounded-full bg-accent-ink" />
-                    </span>
-                  )}
+                  {col.hot && items.length > 0 && <FlipSquare />}
                   {col.title}
                   <span className="ml-auto rounded-full bg-surface px-2 text-sm font-semibold text-ink-muted not-italic tabular-nums">
                     {items.length}
