@@ -201,6 +201,11 @@ class Query implements PromiseLike<Result> {
     this.filters.push((r) => (r[col] ?? null) === v);
     return this;
   }
+  not(col: string, op: "is", v: null) {
+    void op;
+    this.filters.push((r) => (r[col] ?? null) !== v);
+    return this;
+  }
   order(col: string, opts: { ascending?: boolean } = {}) {
     this.orderBy = { col, asc: opts.ascending !== false };
     return this;

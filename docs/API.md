@@ -1242,11 +1242,11 @@ PUT ต้องส่งครบ: `{ name, phone, address, lat, lng, acceptsDe
 ต้องมี `Authorization: Bearer <CRON_SECRET>` · **รับทั้ง `POST` (ตามสัญญา) และ `GET` (Vercel Cron เรียกแบบ GET)** · รันซ้ำได้ปลอดภัย · Vercel Hobby รันได้วันละครั้ง จึงใช้ lazy-expiry เป็นหลัก (ทุก endpoint ที่อ่านออเดอร์ตรวจเวลาหมดอายุให้เอง) cron เป็นตัวกวาดสำรอง
 
 ### `/api/cron/expire-orders`
-ทำให้ออเดอร์ที่ร้านไม่ตอบใน 15 นาที (`submitted`) หรือลูกค้าไม่จ่ายใน 30 นาที (`awaiting_payment`) เป็น `expired` และแจ้งลูกค้า (`order_expired`) · ไม่เกิน 500 ใบต่อรอบ · ใบที่ล้มไม่ทำให้ทั้งรอบล้ม · ลบแถวบันทึกการลองรหัสรับงานที่เก่ากว่า 1 วันด้วย (`pickupAttemptsDeleted`)
+ทำให้ออเดอร์ที่ร้านไม่ตอบใน 15 นาที (`submitted`) หรือลูกค้าไม่จ่ายใน 30 นาที (`awaiting_payment`) เป็น `expired` และแจ้งลูกค้า (`order_expired`) · ไม่เกิน 500 ใบต่อรอบ · ใบที่ล้มไม่ทำให้ทั้งรอบล้ม · ออเดอร์รับเองที่ร้านส่งมอบแล้วแต่ลูกค้าไม่กดรับใน 10 นาที จะถูกปิดเป็น `completed` (นับใน `received`)
 
 ```jsonc
 // Response — HTTP 200
-{"expired":0,"alreadyChanged":0,"failed":0,"pickupAttemptsDeleted":0}
+{"expired":0,"received":0,"alreadyChanged":0,"failed":0}
 ```
 
 ตัวอย่าง error — HTTP 401

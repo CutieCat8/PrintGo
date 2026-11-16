@@ -117,7 +117,12 @@ export async function sweepExpiredOrders(now: Date = new Date()): Promise<SweepR
 
   // Handed-over pickup orders nobody confirmed within HANDOVER_CONFIRM_MINUTES (settlements only
   // count completed orders, so they must not wait for someone to open the page).
-  const waiting = await db.from("orders").select("*").eq("status", "ready").eq("fulfillment", "pickup");
+  const waiting = await db
+    .from("orders")
+    .select("*")
+    .eq("status", "ready")
+    .eq("fulfillment", "pickup")
+    .not("handed_over_at", "is", null);
   if (waiting.error) throw waiting.error;
   for (const raw of waiting.data ?? []) {
     const order = parseRow(OrderRow, raw);
