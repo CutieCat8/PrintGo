@@ -253,6 +253,13 @@ function Gallery() {
           <Timeline
             steps={[
               { key: "s", title: "รอร้านยืนยัน", time: "10:23 น.", state: "done" },
+              { key: "a", title: "รอชำระเงิน", state: "current", busy: true },
+              { key: "p", title: "กำลังปริ้น", state: "upcoming" },
+            ]}
+          />
+          <Timeline
+            steps={[
+              { key: "s", title: "รอร้านยืนยัน", time: "10:23 น.", state: "done" },
               { key: "a", title: "รอชำระเงิน", time: "10:30 น.", state: "done" },
               {
                 key: "p",

@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { cx } from "./cx";
+import { WatchSpinner } from "./WatchSpinner";
 
 export type TimelineStepState = "done" | "current" | "upcoming" | "failed";
 export type TimelineStep = {
@@ -9,6 +10,8 @@ export type TimelineStep = {
   /** Already formatted for display (Thai time). */
   time?: string;
   state: TimelineStepState;
+  /** Current step that is waiting on the customer or someone else: shows a spinner instead of the dot. */
+  busy?: boolean;
 };
 
 const DOT: Record<TimelineStepState, string> = {
@@ -53,15 +56,21 @@ export function Timeline({ steps, className }: { steps: TimelineStep[]; classNam
                 )}
               />
             )}
-            <span
-              aria-hidden="true"
-              className={cx(
-                "z-10 flex size-7 shrink-0 items-center justify-center rounded-full border-2 text-sm font-bold",
-                DOT[step.state],
-              )}
-            >
-              {MARK[step.state]}
-            </span>
+            {step.busy && step.state === "current" ? (
+              <span className="z-10 flex size-7 shrink-0 items-center justify-center bg-surface">
+                <WatchSpinner size={36} className="shrink-0 text-brand" />
+              </span>
+            ) : (
+              <span
+                aria-hidden="true"
+                className={cx(
+                  "z-10 flex size-7 shrink-0 items-center justify-center rounded-full border-2 text-sm font-bold",
+                  DOT[step.state],
+                )}
+              >
+                {MARK[step.state]}
+              </span>
+            )}
             <div className="min-w-0 pt-0.5">
               <p
                 className={cx(

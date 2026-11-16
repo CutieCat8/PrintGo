@@ -3,7 +3,7 @@ import type { Order, OrderDetail, OrderStatus } from "@/lib/db/types";
 /** Pure helpers for order screens (tested in orders.test.ts). */
 
 export type StepState = "done" | "current" | "upcoming" | "failed";
-export type Step = { key: string; title: string; state: StepState };
+export type Step = { key: string; title: string; state: StepState; busy?: boolean };
 
 const PICKUP_STEPS: [OrderStatus, string][] = [
   ["submitted", "รอร้านยืนยัน"],
@@ -65,6 +65,8 @@ export function orderSteps(
     title,
     state:
       o.status === "completed" || i < current ? "done" : i === current ? "current" : "upcoming",
+    // waiting for the customer to pay: the progress list shows a spinner on that step
+    busy: i === current && o.status === "awaiting_payment",
   }));
 }
 
