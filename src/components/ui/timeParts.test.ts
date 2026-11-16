@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { hourOptions, joinTime, minuteOptions, splitTime } from "./timeParts";
+import { allMinutes, hourOptions, joinTime, splitTime } from "./timeParts";
 
 describe("splitTime", () => {
   it("reads HH:mm and ignores anything else", () => {
@@ -35,10 +35,11 @@ describe("options", () => {
     expect(hourOptions()).toHaveLength(24);
     expect(hourOptions(true).at(-1)).toBe("24");
   });
-  it("minutes in 5-minute steps and never hides a saved odd minute", () => {
-    expect(minuteOptions()).toHaveLength(12);
-    expect(minuteOptions("07")).toContain("07");
-    expect(minuteOptions("07")).toHaveLength(13);
-    expect(minuteOptions("30")).toHaveLength(12);
+  it("every minute 00-59", () => {
+    const m = allMinutes();
+    expect(m).toHaveLength(60);
+    expect(m[0]).toBe("00");
+    expect(m[7]).toBe("07");
+    expect(m.at(-1)).toBe("59");
   });
 });

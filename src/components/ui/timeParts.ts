@@ -25,10 +25,7 @@ export function hourOptions(allow24 = false): string[] {
   return Array.from({ length: last + 1 }, (_, h) => String(h).padStart(2, "0"));
 }
 
-/** Minutes in 5-minute steps, plus the current minute if it is not on a step (never hide a saved value). */
-export function minuteOptions(current = ""): string[] {
-  const steps = Array.from({ length: 12 }, (_, i) => String(i * 5).padStart(2, "0"));
-  return current && /^\d{2}$/.test(current) && !steps.includes(current)
-    ? [...steps, current].sort()
-    : steps;
+/** Every minute "00" to "59" (the panel scrolls, so no steps are needed and no saved minute is hidden). */
+export function allMinutes(): string[] {
+  return Array.from({ length: 60 }, (_, m) => String(m).padStart(2, "0"));
 }
