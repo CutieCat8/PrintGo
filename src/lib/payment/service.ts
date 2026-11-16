@@ -192,8 +192,13 @@ export function getPaymentService() {
   return createPaymentService({
     store: createPaymentStore(),
     expire: expireIfDue,
-    // O9 until Sea confirms branch receiver configuration; no real verification is enabled here.
-    provider: (order) => getPaymentProvider({ orderCreatedAt: order.createdAt }),
+    // O9 (manual review) until Sea confirms the SlipOK branch account is PrintGo's PromptPay account
+    // and sets SLIPOK_RECEIVER_CONFIRMED=true on the server. Never derived from a request.
+    provider: (order) =>
+      getPaymentProvider({
+        orderCreatedAt: order.createdAt,
+        branchReceiverConfirmed: process.env.SLIPOK_RECEIVER_CONFIRMED === "true",
+      }),
     notifyRejected: (orderId) => notify(orderId, "payment_rejected"),
     finalizeVerified: async (orderId, paymentId, slipRef) => {
       await finalizePayment({ orderId, paymentId, slipRef, verifiedBy: "slipok" });
