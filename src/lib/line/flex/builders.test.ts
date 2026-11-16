@@ -114,8 +114,8 @@ describe("quote_ready", () => {
 describe("pickup code privacy", () => {
   const withCode = NOTIFY_EVENTS.filter((e) => json(e).includes("4821"));
 
-  it("appears only in payment_verified and ready", () => {
-    expect([...withCode].sort()).toEqual(["payment_verified", "ready"]);
+  it("is not sent in any message (pickup uses the order number)", () => {
+    expect(withCode).toEqual([]);
   });
 
   it("never appears for a delivery order", () => {

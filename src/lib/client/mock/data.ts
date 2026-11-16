@@ -56,6 +56,7 @@ export type MockOrder = {
   pickupCode: string | null;
   paidAt: string | null;
   completedAt: string | null;
+  handedOverAt: string | null;
   createdAt: string;
   updatedAt: string;
   files: OrderFile[];
@@ -260,6 +261,7 @@ export function createSeed(now = Date.now()): MockDb {
     pickupCode: null,
     paidAt: null,
     completedAt: null,
+    handedOverAt: null,
     services: [] as OrderService[],
     payment: null,
     delivery: null,

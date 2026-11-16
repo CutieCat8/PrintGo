@@ -31,6 +31,7 @@ import {
 import { isTerminal, useNow, useOrder } from "@/lib/client/hooks";
 import { customerCanCancel, customerMoney, orderSteps } from "@/lib/client/orders";
 import type { OrderDetail } from "@/lib/db/types";
+import { HANDOVER_CONFIRM_MINUTES } from "@/lib/domain/orders/handover";
 import { LiffBottomNav } from "../../_components/LiffBottomNav";
 import { PaymentSection } from "../../_components/PaymentSection";
 
@@ -193,6 +194,19 @@ function StatusHero({
   const canCancel = customerCanCancel(o.status) && !slipInReview;
   const showPayment = paying || slipInReview || o.payment?.status === "rejected";
   const eta = etaText(o, now);
+
+  async function receive() {
+    setBusy(true);
+    try {
+      await api.receiveMyOrder(o.id);
+      toast("ยืนยันรับของแล้ว ขอบคุณที่ใช้ PrintGo", "success");
+      refresh();
+    } catch (e) {
+      toast(errorMessage(e), "error");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function cancel() {
     setBusy(true);
@@ -363,7 +377,10 @@ function StatusHero({
   }
 
   // C12 / C13: paid → printing → ready → done
-  const code = o.status === "ready" && o.fulfillment === "pickup" ? o.pickupCode : null;
+  const pickupReady = o.status === "ready" && o.fulfillment === "pickup";
+  const confirmEndsAt = o.handedOverAt
+    ? Date.parse(o.handedOverAt) + HANDOVER_CONFIRM_MINUTES * 60_000
+    : null;
   return (
     <div className="flex flex-col gap-3">
       {o.readyNote && !isTerminal(o.status) && (
@@ -395,15 +412,34 @@ function StatusHero({
         />
       )}
 
-      {code && (
+      {pickupReady && confirmEndsAt === null && (
         <div className="rounded-card bg-surface px-5 py-5 text-center ring-2 ring-accent-ink">
-          <p className="text-sm text-ink-muted">รหัสรับงาน (บอกร้านตอนมารับ)</p>
-          <p
-            className="mt-1 font-display text-5xl font-bold tracking-[0.35em] text-ink italic tabular-nums"
-            aria-label={`รหัสรับงาน ${code.split("").join(" ")}`}
-          >
-            {code}
+          <p className="text-sm text-ink-muted">มารับที่ร้าน แล้วบอกร้านเลขออเดอร์นี้</p>
+          <p className="mt-1 font-display text-4xl font-bold tracking-wide text-ink italic tabular-nums">
+            {o.orderNo}
           </p>
+        </div>
+      )}
+
+      {pickupReady && confirmEndsAt !== null && (
+        <div className="rounded-card bg-surface px-5 py-5 ring-2 ring-success-ink">
+          <p className="font-semibold text-success-ink">ร้านส่งมอบงานให้คุณแล้ว</p>
+          <p className="mt-1 text-sm text-ink-muted">
+            ตรวจงานให้เรียบร้อย ถ้าไม่มีปัญหากดยืนยันรับของได้เลย หากไม่กด
+            ระบบจะยืนยันให้เองใน{" "}
+            <span className="font-semibold tabular-nums">
+              {formatCountdown(confirmEndsAt - now.getTime())}
+            </span>{" "}
+            นาที
+          </p>
+          <div className="mt-3 grid grid-cols-1 gap-2">
+            <Button size="lg" loading={busy} onClick={receive}>
+              ได้รับของแล้ว
+            </Button>
+            <Button variant="secondary" onClick={goChat}>
+              งานมีปัญหา คุยกับร้าน
+            </Button>
+          </div>
         </div>
       )}
 

@@ -73,7 +73,7 @@ export default function DeliveryPage() {
               onSelect={() => updateDraft((d) => ({ ...d, fulfillment: "pickup" }))}
               icon="store"
               title="รับเองที่ร้าน"
-              detail="ฟรี · ใช้รหัสรับงาน 4 หลักตอนมารับ"
+              detail="ฟรี · แจ้งเลขออเดอร์กับร้านตอนมารับ"
             />
 
             <Option

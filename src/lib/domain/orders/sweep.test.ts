@@ -93,7 +93,7 @@ describe("sweepExpiredOrders", () => {
     const waiting = seed({ response_deadline: before(60_000) });
     const unpaid = awaiting({ payment_deadline: before(60_000) });
     const result = await sweepExpiredOrders(NOW);
-    expect(result).toEqual({ expired: 2, alreadyChanged: 0, failed: 0 });
+    expect(result).toEqual({ expired: 2, received: 0, alreadyChanged: 0, failed: 0 });
     expect(stored(waiting).status).toBe("expired");
     expect(stored(unpaid).status).toBe("expired");
     expect(h.notify).toHaveBeenCalledTimes(2);
@@ -106,7 +106,7 @@ describe("sweepExpiredOrders", () => {
     const late = seed({ response_deadline: before(1) });
     const exactPay = awaiting({ payment_deadline: T });
     const latePay = awaiting({ payment_deadline: before(1) });
-    expect(await sweepExpiredOrders(NOW)).toEqual({ expired: 2, alreadyChanged: 0, failed: 0 });
+    expect(await sweepExpiredOrders(NOW)).toEqual({ expired: 2, received: 0, alreadyChanged: 0, failed: 0 });
     expect(stored(exact).status).toBe("submitted");
     expect(stored(exactPay).status).toBe("awaiting_payment");
     expect(stored(late).status).toBe("expired");
@@ -129,7 +129,7 @@ describe("sweepExpiredOrders", () => {
     ].map((status) =>
       seed({ status, response_deadline: before(9_999_999), payment_deadline: before(9_999_999) }),
     );
-    expect(await sweepExpiredOrders(NOW)).toEqual({ expired: 0, alreadyChanged: 0, failed: 0 });
+    expect(await sweepExpiredOrders(NOW)).toEqual({ expired: 0, received: 0, alreadyChanged: 0, failed: 0 });
     expect(stored(early).status).toBe("submitted");
     expect(stored(noDeadline).status).toBe("awaiting_payment");
     for (const o of others) expect(stored(o).status).toBe(o.status);
@@ -146,12 +146,12 @@ describe("sweepExpiredOrders", () => {
     seed();
     awaiting();
     expect((await sweepExpiredOrders(NOW)).expired).toBe(2);
-    expect(await sweepExpiredOrders(NOW)).toEqual({ expired: 0, alreadyChanged: 0, failed: 0 });
+    expect(await sweepExpiredOrders(NOW)).toEqual({ expired: 0, received: 0, alreadyChanged: 0, failed: 0 });
     expect(h.notify).toHaveBeenCalledTimes(2);
   });
 
   it("an empty database is fine", async () => {
-    expect(await sweepExpiredOrders(NOW)).toEqual({ expired: 0, alreadyChanged: 0, failed: 0 });
+    expect(await sweepExpiredOrders(NOW)).toEqual({ expired: 0, received: 0, alreadyChanged: 0, failed: 0 });
   });
 
   it("two sweeps at the same moment expire each order once", async () => {
@@ -232,7 +232,7 @@ describe("sweepExpiredOrders", () => {
       return query;
     };
     const result = await sweepExpiredOrders(NOW);
-    expect(result).toEqual({ expired: 0, alreadyChanged: 1, failed: 0 });
+    expect(result).toEqual({ expired: 0, received: 0, alreadyChanged: 1, failed: 0 });
     expect(stored(o).status).toBe("awaiting_payment");
     expect(h.notify).not.toHaveBeenCalled();
   });
@@ -240,16 +240,16 @@ describe("sweepExpiredOrders", () => {
   it("one failing order does not stop the others, and is counted and tried again next time", async () => {
     const orders = [seed(), seed(), seed()];
     db.failures.set("orders.update", "database trouble");
-    expect(await sweepExpiredOrders(NOW)).toEqual({ expired: 0, alreadyChanged: 0, failed: 3 });
+    expect(await sweepExpiredOrders(NOW)).toEqual({ expired: 0, received: 0, alreadyChanged: 0, failed: 3 });
     expect(orders.every((o) => stored(o).status === "submitted")).toBe(true);
     db.failures.clear();
-    expect(await sweepExpiredOrders(NOW)).toEqual({ expired: 3, alreadyChanged: 0, failed: 0 });
+    expect(await sweepExpiredOrders(NOW)).toEqual({ expired: 3, received: 0, alreadyChanged: 0, failed: 0 });
   });
 
   it("a failing notify does not stop the sweep or undo the expiry", async () => {
     h.notify.mockRejectedValue(new Error("LINE down"));
     const o = seed();
-    expect(await sweepExpiredOrders(NOW)).toEqual({ expired: 1, alreadyChanged: 0, failed: 0 });
+    expect(await sweepExpiredOrders(NOW)).toEqual({ expired: 1, received: 0, alreadyChanged: 0, failed: 0 });
     expect(stored(o).status).toBe("expired");
   });
 
@@ -287,6 +287,7 @@ describe("/api/cron/expire-orders", () => {
     expect(post.status).toBe(200);
     expect(await post.json()).toEqual({
       expired: 2,
+      received: 0,
       alreadyChanged: 0,
       failed: 0,
       pickupAttemptsDeleted: 0,

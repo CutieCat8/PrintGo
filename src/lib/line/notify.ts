@@ -25,6 +25,7 @@ export const NOTIFY_EVENTS = [
   "ready",
   "courier_requested",
   "in_transit",
+  "handed_over",
   "completed",
   "chat_message",
   "eta_changed",

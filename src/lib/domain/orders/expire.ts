@@ -1,16 +1,32 @@
 import { getServiceClient } from "@/lib/db/server";
 import { OrderRow, parseRow } from "@/lib/db/types";
 import { ApiError } from "@/lib/errors";
+import { HANDOVER_CONFIRM_MINUTES } from "./handover";
 import { transition } from "./transition";
+
+export { HANDOVER_CONFIRM_MINUTES };
+
+/** True when the shop handed a pickup order over and the customer did not answer in time. */
+export function autoReceiveDue(order: OrderRow, now: Date = new Date()): boolean {
+  return (
+    order.status === "ready" &&
+    order.fulfillment === "pickup" &&
+    order.handedOverAt !== null &&
+    new Date(order.handedOverAt).getTime() + HANDOVER_CONFIRM_MINUTES * 60_000 <= now.getTime()
+  );
+}
 
 /**
  * Lazy expiry (D12): call before returning an order. If the shop did not answer in time
  * (`submitted`) or the customer did not pay in time (`awaiting_payment`), the order becomes
- * `expired` through `transition()` (which also tells the customer). If someone else moved the
- * order at the same moment, the fresh row is returned instead.
+ * `expired` through `transition()` (which also tells the customer). A handed-over pickup order the
+ * customer did not confirm within HANDOVER_CONFIRM_MINUTES becomes `completed` the same way.
+ * If someone else moved the order at the same moment, the fresh row is returned instead.
  */
 export async function expireIfDue(order: OrderRow, now: Date = new Date()): Promise<OrderRow> {
+  const receive = autoReceiveDue(order, now);
   const due =
+    receive ||
     (order.status === "submitted" && new Date(order.responseDeadline) < now) ||
     (order.status === "awaiting_payment" &&
       order.paymentDeadline !== null &&
@@ -21,7 +37,7 @@ export async function expireIfDue(order: OrderRow, now: Date = new Date()): Prom
     return await transition({
       orderId: order.id,
       from: order.status,
-      to: "expired",
+      to: receive ? "completed" : "expired",
       actor: "system",
     });
   } catch (err) {
@@ -43,6 +59,8 @@ export const SWEEP_MAX_PER_RUN = 500;
 export type SweepResult = {
   /** Orders that are expired now. */
   expired: number;
+  /** Handed-over pickup orders the customer did not confirm in time: completed by the system. */
+  received: number;
   /** Orders somebody else moved first (the shop confirmed, the customer paid or cancelled). */
   alreadyChanged: number;
   /** Orders that could not be processed; they are tried again next time. */
@@ -59,7 +77,7 @@ export type SweepResult = {
 export async function sweepExpiredOrders(now: Date = new Date()): Promise<SweepResult> {
   const db = getServiceClient();
   const cutoff = now.toISOString();
-  const result: SweepResult = { expired: 0, alreadyChanged: 0, failed: 0 };
+  const result: SweepResult = { expired: 0, received: 0, alreadyChanged: 0, failed: 0 };
   let seen = 0;
 
   for (const [status, column] of [
@@ -94,6 +112,25 @@ export async function sweepExpiredOrders(now: Date = new Date()): Promise<SweepR
         }
       }
       if (rows.length < SWEEP_PAGE) break;
+    }
+  }
+
+  // Handed-over pickup orders nobody confirmed within HANDOVER_CONFIRM_MINUTES (settlements only
+  // count completed orders, so they must not wait for someone to open the page).
+  const waiting = await db.from("orders").select("*").eq("status", "ready").eq("fulfillment", "pickup");
+  if (waiting.error) throw waiting.error;
+  for (const raw of waiting.data ?? []) {
+    const order = parseRow(OrderRow, raw);
+    if (!autoReceiveDue(order, now)) continue;
+    try {
+      const after = await expireIfDue(order, now);
+      if (after.status === "completed") result.received++;
+      else result.alreadyChanged++;
+    } catch (err) {
+      result.failed++;
+      console.error(
+        `[expire-orders] order ${order.id} failed: ${err instanceof Error ? err.message : "unknown"}`,
+      );
     }
   }
   return result;

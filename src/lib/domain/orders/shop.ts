@@ -14,7 +14,6 @@ import { notify } from "@/lib/line/notify";
 import { unreadCount, unreadCounts } from "@/lib/domain/chat/unread";
 import { loadDetailParts } from "./detail";
 import { expireIfDue } from "./expire";
-import { checkPickupCode, normalizePickupCode } from "./pickupAttempts";
 import { transition } from "./transition";
 import {
   presentOrder,
@@ -34,7 +33,6 @@ export const RejectBody = z.object({
     .min(3, "เหตุผลต้องยาวอย่างน้อย 3 ตัวอักษร")
     .max(300, "เหตุผลยาวเกิน 300 ตัวอักษร"),
 });
-export const CompleteBody = z.object({ pickupCode: z.string().min(1).max(20) });
 
 const invalid = (message: string, details: Record<string, unknown> = {}) =>
   new ApiError("VALIDATION_ERROR", 422, message, details);
@@ -290,25 +288,37 @@ export async function markReady(shopId: string, orderId: string): Promise<OrderV
 }
 
 /**
- * POST .../complete {pickupCode}: the customer says the code at the counter and the shop types it.
- * Only for a pickup order that is `ready`. Wrong code -> 422; more than 5 tries in 10 minutes ->
- * RATE_LIMITED. The code is never returned or logged.
+ * POST .../handover: the customer tells the shop the order number at the counter and the shop hands
+ * the print over. Only for a pickup order that is `ready`. This does NOT complete the order: it
+ * records `handed_over_at` and tells the customer, who confirms receipt (POST /api/liff/orders/:id/receive)
+ * or is confirmed automatically after HANDOVER_CONFIRM_MINUTES (expire.ts). Calling it twice is harmless.
  */
-export async function completePickup(
-  shopId: string,
-  orderId: string,
-  rawBody: unknown,
-): Promise<OrderView> {
-  const { pickupCode } = CompleteBody.parse(rawBody);
+export async function handOverPickup(shopId: string, orderId: string): Promise<OrderView> {
   const db = getServiceClient();
   const row = await loadForAction(db, shopId, orderId);
 
-  // Wrong state or a delivery order: a plain 409, and no try is counted.
-  if (row.status !== "ready" || row.fulfillment !== "pickup" || row.pickupCode === null) {
+  if (row.status !== "ready" || row.fulfillment !== "pickup") {
     throw new ApiError("ORDER_INVALID_TRANSITION", 409, undefined, { currentStatus: row.status });
   }
-  if (!(await checkPickupCode(db, orderId, normalizePickupCode(pickupCode), row.pickupCode))) {
-    throw invalid("รหัสรับงานไม่ถูกต้อง", { field: "pickupCode" });
+  if (row.handedOverAt !== null) return present(db, row);
+
+  const handedOverAt = new Date().toISOString();
+  const { data, error } = await db
+    .from("orders")
+    .update(toDb({ handedOverAt, updatedAt: handedOverAt }))
+    .eq("id", orderId)
+    .eq("shop_id", shopId)
+    .eq("status", "ready")
+    .is("handed_over_at", null)
+    .select("*")
+    .maybeSingle();
+  if (error) throw new ApiError("INTERNAL", 500);
+  if (!data) {
+    // somebody else changed the order at the same moment: answer with the fresh state
+    return present(db, await loadForAction(db, shopId, orderId));
   }
-  return present(db, await transition({ orderId, from: "ready", to: "completed", actor: "shop" }));
+  await notify(orderId, "handed_over").catch((e) =>
+    console.warn("handed_over notify failed", e instanceof Error ? e.message : "unknown"),
+  );
+  return present(db, parseRow(OrderRow, data));
 }

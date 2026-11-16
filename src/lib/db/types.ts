@@ -126,6 +126,8 @@ export const OrderRow = z.object({
   pickupCode: z.string().nullable(),
   paidAt: timestamp.nullable(),
   completedAt: timestamp.nullable(),
+  /** When the shop handed a pickup order over; the customer then has 10 minutes to confirm. */
+  handedOverAt: timestamp.nullable().default(null),
   updatedAt: timestamp,
 });
 
@@ -351,6 +353,7 @@ export const Order = OrderRow.pick({
   readyInMinutes: true,
   estimatedReadyAt: true,
   readyNote: true,
+  handedOverAt: true, // pickup: when the shop handed over; the customer then has 10 minutes to confirm
   createdAt: true,
   updatedAt: true,
 }).extend({

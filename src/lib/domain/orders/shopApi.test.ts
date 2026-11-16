@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { POST as completeRoute } from "@/app/api/shop/orders/[id]/complete/route";
+import { POST as handoverRoute } from "@/app/api/shop/orders/[id]/handover/route";
 import { POST as confirmRoute } from "@/app/api/shop/orders/[id]/confirm/route";
 import { POST as etaRoute } from "@/app/api/shop/orders/[id]/eta/route";
 import { POST as markReadyRoute } from "@/app/api/shop/orders/[id]/mark-ready/route";
@@ -156,7 +156,7 @@ describe("every shop route", () => {
       act(rejectRoute, o.id as string, { reason: "ปิดร้าน" }),
       act(startRoute, o.id as string),
       act(markReadyRoute, o.id as string),
-      act(completeRoute, o.id as string, { pickupCode: CODE }),
+      act(handoverRoute, o.id as string),
     ];
     for (const res of await Promise.all(calls)) expect(res.status).toBe(403);
     expect(stored(o).status).toBe("submitted");
@@ -183,7 +183,7 @@ describe("every shop route", () => {
       ["reject", () => act(rejectRoute, theirs.id as string, { reason: "ปิดร้าน" })],
       ["start", () => act(startRoute, theirs.id as string)],
       ["ready", () => act(markReadyRoute, theirs.id as string)],
-      ["complete", () => act(completeRoute, theirs.id as string, { pickupCode: CODE })],
+      ["handover", () => act(handoverRoute, theirs.id as string)],
     ];
     for (const [, run] of attempts) {
       const res = await run();
@@ -198,7 +198,6 @@ describe("every shop route", () => {
     expect(db.rows("refunds")).toHaveLength(0);
     expect(db.rows("messages")).toHaveLength(0);
     expect(h.notify).not.toHaveBeenCalled();
-    expect(db.rows("webhook_events")).toHaveLength(0); // no pickup try was counted
   });
 
   it("a bad order id is 404", async () => {
@@ -730,140 +729,62 @@ describe("POST start-printing and mark-ready", () => {
 });
 
 // ---------------------------------------------------------------------------------------------
-describe("POST complete (pickup code)", () => {
-  const complete = (o: Row, code: unknown) =>
-    act(completeRoute, o.id as string, { pickupCode: code });
+describe("POST handover (pickup)", () => {
+  const handover = (o: Row) => act(handoverRoute, o.id as string);
   const ready = (over: Row = {}) => seedOrder({ status: "ready", ...PAID, ...over });
 
-  it("the right code completes a pickup order, sets completed_at, tells the customer", async () => {
+  it("records handed_over_at, keeps the order ready, tells the customer", async () => {
     const o = ready();
-    const res = await complete(o, CODE);
+    const res = await handover(o);
     expect(res.status).toBe(200);
     const json = await res.json();
-    expect(json).toMatchObject({ status: "completed", pickupCode: null });
-    expect(JSON.stringify(json)).not.toContain(CODE);
-    expect(stored(o)).toMatchObject({ status: "completed", completed_at: T });
-    expect(h.notify).toHaveBeenCalledWith(o.id, "completed");
+    expect(json).toMatchObject({ status: "ready", pickupCode: null, handedOverAt: T });
+    expect(stored(o)).toMatchObject({ status: "ready", handed_over_at: T });
+    expect(h.notify).toHaveBeenCalledWith(o.id, "handed_over");
   });
 
-  it("ignores spaces in the code", async () => {
-    for (const typed of [" 4821 ", "48 21", "4 8 2 1", "\t4821\n"]) {
-      const o = ready();
-      expect((await complete(o, typed)).status).toBe(200);
-    }
-  });
-
-  it("a wrong code is 422, the order stays ready, and the answer does not show the real code", async () => {
+  it("needs no body and no pickup code", async () => {
     const o = ready();
-    const res = await complete(o, "0000");
-    expect(res.status).toBe(422);
-    expect(JSON.stringify(await res.json())).not.toContain(CODE);
-    expect(stored(o).status).toBe("ready");
-    expect(h.notify).not.toHaveBeenCalled();
-    // Each of these is also a wrong code (422); an order of its own keeps the tries apart.
-    for (const bad of ["abcd", "482", "48210", "٤٨٢١", "4821x"]) {
-      const fresh = ready();
-      expect((await complete(fresh, bad)).status).toBe(422);
-      expect(stored(fresh).status).toBe("ready");
-    }
-    expect(stored(o).status).toBe("ready");
+    expect((await rawAct(handoverRoute, o.id as string, "")).status).toBe(200);
   });
 
-  it("after 5 tries within 10 minutes it is RATE_LIMITED, even for the right code", async () => {
+  it("twice is harmless: same answer, one notification, time not moved", async () => {
     const o = ready();
-    for (let i = 0; i < 5; i++) expect((await complete(o, "0000")).status).toBe(422);
-    const blocked = await complete(o, CODE);
-    expect(blocked.status).toBe(429);
-    expect((await blocked.json()).error.code).toBe("RATE_LIMITED");
-    expect(stored(o).status).toBe("ready");
+    await handover(o);
+    const again = await handover(o);
+    expect(again.status).toBe(200);
+    expect(stored(o).handed_over_at).toBe(T);
+    expect(h.notify).toHaveBeenCalledTimes(1);
   });
 
-  it("the limit is per order and the window is 10 minutes", async () => {
+  it("a notification failure does not undo the hand-over", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    h.notify.mockRejectedValueOnce(new Error("LINE down"));
     const o = ready();
-    const other = ready();
-    for (let i = 0; i < 5; i++) await complete(o, "0000");
-    expect((await complete(o, CODE)).status).toBe(429);
-    expect((await complete(other, CODE)).status).toBe(200); // another order is not affected
-
-    vi.setSystemTime(new Date(NOW.getTime() + 11 * 60_000));
-    expect((await complete(o, CODE)).status).toBe(200);
+    expect((await handover(o)).status).toBe(200);
+    expect(stored(o).handed_over_at).toBe(T);
   });
 
-  it("pressing the button again while locked does not extend the lock", async () => {
-    const o = ready();
-    for (let i = 0; i < 5; i++) await complete(o, "0000");
-    vi.setSystemTime(new Date(NOW.getTime() + 9 * 60_000));
-    for (let i = 0; i < 3; i++) expect((await complete(o, CODE)).status).toBe(429);
-    vi.setSystemTime(new Date(NOW.getTime() + 11 * 60_000)); // the 5 real tries are now older than 10 minutes
-    expect((await complete(o, CODE)).status).toBe(200);
-  });
-
-  it("four wrong tries and then the right one still works", async () => {
-    const o = ready();
-    for (let i = 0; i < 4; i++) await complete(o, "0000");
-    expect((await complete(o, CODE)).status).toBe(200);
-  });
-
-  it("a burst of parallel guesses is counted together", async () => {
-    const o = ready();
-    const guesses = await Promise.all(
-      Array.from({ length: 12 }, (_, i) => complete(o, String(1000 + i))),
-    );
-    expect(guesses.filter((r) => r.status === 422).length).toBeLessThanOrEqual(5);
-    expect(guesses.filter((r) => r.status === 429).length).toBeGreaterThanOrEqual(7);
-  });
-
-  it("only a pickup order that is ready: a delivery order or another state is 409 and no try is counted", async () => {
-    const d = ready({ ...delivery });
-    expect((await complete(d, CODE)).status).toBe(409);
-    for (const status of [
-      "paid",
-      "printing",
-      "courier_requested",
-      "in_transit",
-      "completed",
-      "cancelled",
-    ]) {
+  it("only a pickup order that is ready: a delivery order or another state is 409", async () => {
+    const d = ready({ fulfillment: "delivery" });
+    expect((await handover(d)).status).toBe(409);
+    for (const status of ["submitted", "awaiting_payment", "paid", "printing", "completed"]) {
       const o = seedOrder({ status, ...PAID });
-      expect((await complete(o, CODE)).status).toBe(409);
-      expect(stored(o).status).toBe(status);
+      expect((await handover(o)).status).toBe(409);
+      expect(stored(o).handed_over_at ?? null).toBeNull();
     }
-    expect(db.rows("webhook_events")).toHaveLength(0);
+    expect(h.notify).not.toHaveBeenCalled();
   });
 
-  it("the code never appears in a log", async () => {
-    const spies = [
-      vi.spyOn(console, "log").mockImplementation(() => {}),
-      vi.spyOn(console, "info").mockImplementation(() => {}),
-      vi.spyOn(console, "warn").mockImplementation(() => {}),
-      vi.spyOn(console, "error").mockImplementation(() => {}),
-    ];
-    const o = ready();
-    await complete(o, "0000");
-    await complete(o, CODE);
-    for (const spy of spies) {
-      expect(JSON.stringify(spy.mock.calls)).not.toContain(CODE);
-      expect(JSON.stringify(spy.mock.calls)).not.toContain("0000");
-    }
-    expect(JSON.stringify(db.rows("webhook_events"))).not.toContain(CODE);
-  });
-
-  it("needs a pickupCode in the body", async () => {
-    const o = ready();
-    for (const body of [
-      {},
-      { pickupCode: "" },
-      { pickupCode: 4821 },
-      { pickupCode: "1".repeat(21) },
-    ]) {
-      expect((await act(completeRoute, o.id as string, body)).status).toBe(422);
-    }
-    expect(stored(o).status).toBe("ready");
-  });
-
-  it("two shops' copies of the same code do not mix: only the owner shop can complete", async () => {
+  it("only the owner shop can hand over", async () => {
     const theirs = seedOrder({ shop_id: SHOP_B, status: "ready", ...PAID });
-    expect((await complete(theirs, CODE)).status).toBe(404);
-    expect(stored(theirs).status).toBe("ready");
+    expect((await handover(theirs)).status).toBe(404);
+    expect(stored(theirs).handed_over_at ?? null).toBeNull();
+  });
+
+  it("the shop cannot complete the order itself", async () => {
+    const o = ready();
+    await handover(o);
+    expect(stored(o).status).toBe("ready");
   });
 });

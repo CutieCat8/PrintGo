@@ -48,6 +48,7 @@ const NULLABLE_DEFAULTS: Record<string, string[]> = {
     "pickup_code",
     "paid_at",
     "completed_at",
+    "handed_over_at",
   ],
   order_files: ["deleted_at"],
   messages: ["read_at", "push_sent_at"],
