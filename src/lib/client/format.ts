@@ -1,3 +1,4 @@
+import { selectedPageCount } from "@/lib/pages";
 import type { ColorMode, Order, Paper, ServiceUnit, Sides } from "@/lib/db/types";
 
 /** Display text and Thai time. All times shown in Asia/Bangkok, whatever the device clock zone. */
@@ -15,9 +16,15 @@ export function fileSettingsText(f: {
   sides: Sides;
   copies: number;
   pageCount?: number | null;
+  /** Canonical "1-3,5,8-10"; null/absent = every page. */
+  pageRange?: string | null;
 }) {
   const parts = [COLOR_LABEL[f.color], PAPER_LABEL[f.paper], SIDES_LABEL[f.sides]];
-  if (f.pageCount) parts.unshift(`${f.pageCount} หน้า`);
+  if (f.pageCount && f.pageRange) {
+    parts.unshift(
+      `พิมพ์หน้า ${f.pageRange.replace(/,/g, ", ")} (${selectedPageCount(f.pageRange, f.pageCount)} จาก ${f.pageCount} หน้า)`,
+    );
+  } else if (f.pageCount) parts.unshift(`${f.pageCount} หน้า`);
   parts.push(`${f.copies} ชุด`);
   return parts.join(" · ");
 }

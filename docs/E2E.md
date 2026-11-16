@@ -9,7 +9,7 @@
 | # | รายการ | ผล |
 |---|---|---|
 | 0.1 | Vercel deploy `main` ล่าสุดสถานะ Ready | - |
-| 0.2 | รัน migration ครบ 4 ไฟล์บน Supabase (`init_schema`, `atomic_order_finance`, `admin_payment_review`, `manual_delivery_transition`) | - |
+| 0.2 | รัน migration ครบทุกไฟล์ใน `supabase/migrations/` (ตอนนี้ 6 ไฟล์ รวม `handover_confirm` และ `page_selection`) **ก่อน** deploy โค้ดบน Supabase (`init_schema`, `atomic_order_finance`, `admin_payment_review`, `manual_delivery_transition`) | - |
 | 0.3 | env บน Vercel ครบตาม `.env.example` รวม `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`, `CRON_SECRET` แล้ว redeploy | - |
 | 0.4 | LINE OA: Webhook URL ชี้ `/api/line/webhook` และกด Verify ผ่าน · Rich Menu ขึ้นในแชท OA | - |
 | 0.5 | LIFF Endpoint URL = `https://printgo-puce.vercel.app/liff` (ลิงก์ใน Flex/Rich Menu ต่อท้ายด้วย `/orders/...`, `/chats/...`) | - |

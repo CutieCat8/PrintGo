@@ -231,6 +231,7 @@ export function createSeed(now = Date.now()): MockDb {
     mime: originalName.endsWith(".png") ? "image/png" : "application/pdf",
     sizeBytes: 250_000 * pageCount,
     pageCount,
+    pageRange: null,
     color,
     paper: "A4",
     sides: "single",

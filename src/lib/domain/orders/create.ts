@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { toDb } from "@/lib/db/case";
 import { getServiceClient } from "@/lib/db/server";
 import { OrderRow, parseRow, ShopHourRow } from "@/lib/db/types";
+import { parsePageRange } from "@/lib/pages";
 import {
   ALLOWED_MIME_TYPES,
   MAX_FILE_BYTES,
@@ -91,6 +92,19 @@ async function checkFiles(
   return checked;
 }
 
+/** The range as stored: canonical text, or null for every page. Already validated by estimate(). */
+function canonicalRange(range: string | null | undefined, pageCount: number): string | null {
+  if (range === null || range === undefined || range === "") return null;
+  const r = parsePageRange(range, pageCount);
+  if (!r.ok) throw new ApiError("VALIDATION_ERROR", 422, r.message, { field: "pageRange" });
+  return r.canonical;
+}
+
+function pageRangeColumn(range: string | null | undefined, pageCount: number) {
+  const canonical = canonicalRange(range, pageCount);
+  return canonical === null ? {} : { pageRange: canonical };
+}
+
 /** Undo a half-made order. Children first: order_files / order_services reference the order. */
 async function deleteOrderRows(db: SupabaseClient, orderId: string): Promise<void> {
   for (const table of ["order_services", "order_files", "orders"]) {
@@ -172,6 +186,8 @@ export async function createOrder(
           mime: f.mime,
           sizeBytes: f.sizeBytes,
           pageCount: f.input.pageCount,
+          // only sent when used: ordinary orders keep working even before the column exists
+          ...pageRangeColumn(f.input.pageRange, f.input.pageCount),
           color: f.input.color,
           paper: f.input.paper,
           sides: f.input.sides,

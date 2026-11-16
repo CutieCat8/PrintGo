@@ -1,5 +1,6 @@
 "use client";
 
+import { selectedPageCount } from "@/lib/pages";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
@@ -423,7 +424,12 @@ function FilesCard({ order: o }: { order: OrderDetail }) {
                 <p className="truncate font-medium">
                   {i + 1}. {f.originalName}
                 </p>
-                <p className="text-sm text-ink-muted">{fileSettingsText(f)}</p>
+                <p className="text-sm text-ink-muted">{fileSettingsText({ ...f, pageRange: null })}</p>
+                {f.pageRange && (
+                  <p className="mt-1 text-sm font-semibold text-warning-ink">
+                    ปริ้นเฉพาะหน้า {f.pageRange.replace(/,/g, ", ")} ({selectedPageCount(f.pageRange, f.pageCount)} จาก {f.pageCount} หน้า)
+                  </p>
+                )}
                 {services.length > 0 && (
                   <p className="mt-1 text-sm font-semibold text-accent-ink">
                     + {services.map((s) => s.name).join(", ")}

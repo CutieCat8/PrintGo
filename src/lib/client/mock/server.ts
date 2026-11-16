@@ -1,3 +1,4 @@
+import { parsePageRange, selectedPageCount } from "@/lib/pages";
 import {
   ConfirmOrderBody,
   EtaBody,
@@ -296,7 +297,7 @@ function priceFiles(ms: MockShop, files: FileSettingInput[]) {
         sides: f.sides,
       });
     }
-    const filePages = f.pageCount * f.copies;
+    const filePages = selectedPageCount(f.pageRange, f.pageCount) * f.copies;
     pages += filePages;
     print += filePages * rule.pricePerPageSatang;
   });
@@ -517,6 +518,10 @@ export const mockApi: Api = {
       mime: f.mime,
       sizeBytes: f.sizeBytes,
       pageCount: f.pageCount,
+      pageRange: (() => {
+        const r = f.pageRange ? parsePageRange(f.pageRange, f.pageCount) : null;
+        return r && r.ok ? r.canonical : null;
+      })(),
       color: f.color,
       paper: f.paper,
       sides: f.sides,

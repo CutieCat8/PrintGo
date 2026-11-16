@@ -188,6 +188,7 @@ const file = (over: Partial<DraftFile> = {}): DraftFile => ({
   key: "k",
   name: "a.pdf",
   mime: "application/pdf",
+  pageRange: null,
   sizeBytes: 100,
   path: "order-files/pending/x/a.pdf",
   upload: "done",

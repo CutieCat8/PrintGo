@@ -2,6 +2,7 @@
 
 import { useSyncExternalStore } from "react";
 import type { ColorMode, Fulfillment, Paper, Sides } from "@/lib/db/types";
+import { parsePageRange } from "@/lib/pages";
 import type { CreateOrderRequest, EstimateRequest, SelectedService } from "./types";
 
 /**
@@ -26,6 +27,8 @@ export type DraftFile = {
   /** pdf.js could not open it (password or broken): warn, but let them continue. */
   pageWarning: "password" | "broken" | "unknown" | null;
   counting: boolean;
+  /** Pages to print, canonical "1-3,5,8-10"; null = every page. Reset when the page count changes. */
+  pageRange: string | null;
   color: ColorMode;
   paper: Paper;
   sides: Sides;
@@ -70,6 +73,7 @@ function load() {
         .map((f) => ({
           ...f,
           counting: false,
+          pageRange: f.pageRange ?? null,
           // JSON turns NaN into null: an emptied copies box comes back as 1
           copies: typeof f.copies === "number" ? f.copies : 1,
         }));
@@ -147,7 +151,8 @@ export function filesReady(d: OrderDraft): boolean {
         f.pageCount <= 10000 &&
         Number.isInteger(f.copies) &&
         f.copies >= 1 &&
-        f.copies <= 99,
+        f.copies <= 99 &&
+        (f.pageRange === null || parsePageRange(f.pageRange, f.pageCount).ok),
     ) &&
     d.note.length <= 500
   );
@@ -156,6 +161,7 @@ export function filesReady(d: OrderDraft): boolean {
 function fileSettings(f: DraftFile) {
   return {
     pageCount: f.pageCount ?? 1,
+    ...(f.pageRange ? { pageRange: f.pageRange } : {}),
     color: f.color,
     paper: f.paper,
     sides: f.sides,

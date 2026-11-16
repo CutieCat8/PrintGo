@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { ColorMode, Fulfillment, Paper, Sides } from "@/lib/db/enums";
 import { ALLOWED_MIME_TYPES, MAX_FILE_BYTES, MAX_FILES_PER_ORDER } from "@/lib/domain/files/paths";
+import { MAX_RANGE_TEXT } from "@/lib/pages";
 
 /**
  * Request bodies of CONTRACTS 6.1 for estimate and create-order. Money never appears here:
@@ -12,6 +13,8 @@ const MAX_PAGES_PER_FILE = 10_000;
 
 const fileSetting = {
   pageCount: z.number().int().min(1, "จำนวนหน้าต้องไม่น้อยกว่า 1").max(MAX_PAGES_PER_FILE),
+  /** Pages to print, e.g. "1-3,5,8-10"; missing/null = every page. Checked against pageCount on the server. */
+  pageRange: z.string().max(MAX_RANGE_TEXT).nullish(),
   color: ColorMode,
   paper: Paper,
   sides: Sides,

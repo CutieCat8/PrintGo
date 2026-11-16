@@ -1,9 +1,13 @@
 import { ApiError } from "@/lib/errors";
+import { parsePageRange } from "@/lib/pages";
 import type { ColorMode, Fulfillment, Paper, ServiceUnit, Sides } from "@/lib/db/enums";
 
 /** Shapes below follow docs/CONTRACTS.md sections 3 and 5. */
 export type FileSetting = {
+  /** Pages in the file. */
   pageCount: number;
+  /** Pages to print ("1-3,5,8-10"); null/undefined = all `pageCount` pages. */
+  pageRange?: string | null;
   color: ColorMode;
   paper: Paper;
   sides: Sides;
@@ -80,6 +84,16 @@ function isNonNegativeInt(n: unknown): n is number {
   return typeof n === "number" && Number.isSafeInteger(n) && n >= 0;
 }
 
+/** Pages printed for one copy of a file: the selected pages, or every page. Bad ranges are a 422. */
+function printedPagesPerCopy(file: FileSetting, fileIndex: number): number {
+  if (file.pageRange === null || file.pageRange === undefined || file.pageRange === "") {
+    return file.pageCount;
+  }
+  const r = parsePageRange(file.pageRange, file.pageCount);
+  if (!r.ok) throw invalid(r.message, { fileIndex, field: "pageRange" });
+  return r.pages.length;
+}
+
 export function estimate(input: EstimateInput): Estimate {
   const { files, rules, tiers, shopServices, selectedServices, fulfillment, deliveryFeeSatang } =
     input;
@@ -112,7 +126,7 @@ export function estimate(input: EstimateInput): Estimate {
     if (!isNonNegativeInt(rule.pricePerPageSatang)) {
       throw invalid("ราคาต่อหน้าของร้านไม่ถูกต้อง", { fileIndex });
     }
-    const pages = file.pageCount * file.copies;
+    const pages = printedPagesPerCopy(file, fileIndex) * file.copies;
     const filePrice = pages * rule.pricePerPageSatang;
     perFile.push({ filePrice, pages });
     totalPages += pages;

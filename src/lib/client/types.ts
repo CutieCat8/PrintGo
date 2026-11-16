@@ -48,6 +48,8 @@ export const ShopListItem = z.object({
 
 export type FileSettingInput = {
   pageCount: number;
+  /** Pages to print ("1-3,5,8-10"); null/absent = every page. */
+  pageRange?: string | null;
   color: ColorMode;
   paper: Paper;
   sides: Sides;
