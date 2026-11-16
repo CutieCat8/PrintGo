@@ -174,3 +174,41 @@ describe("other events", () => {
     expect(uris("in_transit", data({ trackingUrl: "http://insecure.example" }))).toHaveLength(1);
   });
 });
+
+describe("minimal card design", () => {
+  it("has no coloured header bar: the title is green text inside the body", () => {
+    const msg = buildNotifyMessage("ready", data());
+    if (msg.type !== "flex") throw new Error("flex expected");
+    const c = msg.contents as {
+      header?: unknown;
+      body: { contents: { text?: string; color?: string }[] };
+    };
+    expect(c.header).toBeUndefined();
+    const title = c.body.contents.find((n) => n.text?.includes("PG-0012"));
+    expect(title?.color).toBe("#14532D");
+  });
+
+  it("actions are plain links, the main one in green", () => {
+    const s = json("quote_ready");
+    expect(s).toContain('"style":"link"');
+    expect(s).not.toContain('"style":"primary"');
+    expect(s).toContain('"color":"#14532D"');
+  });
+
+  it("shows the logo only when the public URL is https", () => {
+    const prev = process.env.NEXT_PUBLIC_APP_URL;
+    try {
+      process.env.NEXT_PUBLIC_APP_URL = "https://app.example.test/";
+      expect(json("quote_ready")).toContain('"url":"https://app.example.test/logo-256.png"');
+      process.env.NEXT_PUBLIC_APP_URL = "http://localhost:3000";
+      expect(json("quote_ready")).not.toContain('"type":"image"');
+    } finally {
+      if (prev === undefined) delete process.env.NEXT_PUBLIC_APP_URL;
+      else process.env.NEXT_PUBLIC_APP_URL = prev;
+    }
+  });
+
+  it("has a time line under the title", () => {
+    expect(json("completed")).toContain("น.");
+  });
+});

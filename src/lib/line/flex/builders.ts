@@ -28,9 +28,10 @@ export type NotifyData = {
   now: Date;
 };
 
-const NAVY = "#1A1815"; // ink (name kept)
-const ORANGE = "#0F766E"; // accent teal (name kept)
+const GREEN = "#14532D"; // forest green: titles and the main link
+const INK = "#1A1815";
 const MUTED = "#6B7280";
+const LINE_COLOR = "#E7E5E4";
 const CHAT_PREVIEW_CHARS = 60;
 
 type Button = { label: string; uri: string; primary?: boolean };
@@ -49,48 +50,81 @@ function rowBox({ label, value, bold }: Row) {
     type: "box",
     layout: "horizontal",
     contents: [
-      text(label, { color: MUTED, flex: 3 }),
-      text(value, { align: "end", flex: 4, weight: bold ? "bold" : "regular" }),
+      text(label, { color: bold ? INK : MUTED, flex: 3, weight: bold ? "bold" : "regular" }),
+      text(value, { align: "end", flex: 4, weight: bold ? "bold" : "regular", color: INK }),
     ],
   };
 }
 
-/** One card: coloured title, plain lines, label/value rows, buttons. */
+/** The logo is shown only when the public site URL is https (LINE cannot load http images). */
+function logoUrl(): string | null {
+  const base = (process.env.NEXT_PUBLIC_APP_URL ?? "").replace(/\/$/, "");
+  return /^https:\/\//.test(base) ? `${base}/logo-256.png` : null;
+}
+
+/**
+ * One minimal card (white, no coloured bar): logo, green title, small time line, a hairline,
+ * plain lines, label/value rows, then plain text links as the actions.
+ */
 function bubble(args: {
   title: string;
+  /** Small grey line under the title, e.g. the time. */
+  meta?: string;
   lines?: string[];
   rows?: Row[];
   buttons?: Button[];
   accent?: string;
 }): Record<string, unknown> {
-  const body: unknown[] = [
-    ...(args.lines ?? []).map((l) => text(l)),
+  const logo = logoUrl();
+  const head: unknown[] = [
+    ...(logo
+      ? [{ type: "image", url: logo, size: "48px", aspectMode: "fit", align: "center" }]
+      : []),
+    text(args.title, {
+      color: args.accent ?? GREEN,
+      weight: "bold",
+      size: "lg",
+      align: "center",
+      margin: logo ? "md" : "none",
+    }),
+    ...(args.meta ? [text(args.meta, { color: MUTED, size: "xs", align: "center" })] : []),
+  ];
+  const detail: unknown[] = [
+    ...(args.lines ?? []).map((l) => text(l, { color: INK })),
     ...(args.rows ?? []).map(rowBox),
   ];
+  const body: unknown[] = [...head];
+  if (detail.length) {
+    body.push({ type: "separator", margin: "lg", color: LINE_COLOR });
+    body.push({ type: "box", layout: "vertical", spacing: "md", margin: "lg", contents: detail });
+  }
   const bubbleJson: Record<string, unknown> = {
     type: "bubble",
-    size: "kilo",
-    header: {
+    size: "mega",
+    body: {
       type: "box",
       layout: "vertical",
-      backgroundColor: args.accent ?? NAVY,
-      paddingAll: "md",
-      contents: [text(args.title, { color: "#FFFFFF", weight: "bold", size: "md" })],
+      paddingAll: "xl",
+      spacing: "sm",
+      contents: body,
     },
-    body: { type: "box", layout: "vertical", spacing: "sm", contents: body },
   };
   if (args.buttons?.length) {
     bubbleJson.footer = {
       type: "box",
       layout: "vertical",
-      spacing: "sm",
-      contents: args.buttons.map((b) => ({
-        type: "button",
-        style: b.primary ? "primary" : "secondary",
-        color: b.primary ? ORANGE : undefined,
-        height: "sm",
-        action: { type: "uri", label: b.label.slice(0, 20), uri: b.uri },
-      })),
+      spacing: "none",
+      paddingAll: "none",
+      contents: [
+        { type: "separator", color: LINE_COLOR },
+        ...args.buttons.map((b) => ({
+          type: "button",
+          style: "link",
+          color: b.primary ? GREEN : MUTED,
+          height: "md",
+          action: { type: "uri", label: b.label.slice(0, 20), uri: b.uri },
+        })),
+      ],
     };
   }
   return bubbleJson;
@@ -109,6 +143,8 @@ export function buildNotifyMessage(event: NotifyEvent, d: NotifyData): LineMessa
   const view: Button = { label: "ดูออเดอร์", uri: d.liff(`/orders/${order.id}`), primary: true };
   const eta = etaText(order, now);
   const isPickup = order.fulfillment === "pickup";
+  const card = (args: Parameters<typeof bubble>[0]) =>
+    bubble({ meta: `${formatDayTime(now, now)} น.`, ...args });
 
   switch (event) {
     case "quote_ready": {
@@ -136,7 +172,7 @@ export function buildNotifyMessage(event: NotifyEvent, d: NotifyData): LineMessa
       }
       return flex(
         `ร้าน ${d.shopName} ยืนยันราคาออเดอร์ ${no} รวม ${formatBaht(order.totalSatang ?? 0)} บาท`,
-        bubble({
+        card({
           title: `ใบเสนอราคา ${no}`,
           lines,
           rows,
@@ -150,7 +186,7 @@ export function buildNotifyMessage(event: NotifyEvent, d: NotifyData): LineMessa
       if (order.readyNote) lines.push(`หมายเหตุร้าน: ${order.readyNote}`);
       return flex(
         `ร้าน ${d.shopName} ปรับเวลาเสร็จของออเดอร์ ${no}`,
-        bubble({
+        card({
           title: `ปรับเวลาเสร็จ ${no}`,
           lines,
           // No cancel button after payment (D19): the customer can only chat with the shop
@@ -167,14 +203,14 @@ export function buildNotifyMessage(event: NotifyEvent, d: NotifyData): LineMessa
       if (eta) lines.push(eta);
       return flex(
         `ชำระเงินออเดอร์ ${no} สำเร็จ`,
-        bubble({ title: `ชำระเงินแล้ว ${no}`, lines, buttons: [view] }),
+        card({ title: `ชำระเงินแล้ว ${no}`, lines, buttons: [view] }),
       );
     }
 
     case "payment_rejected":
       return flex(
         `สลิปออเดอร์ ${no} ไม่ผ่านการตรวจสอบ`,
-        bubble({
+        card({
           title: `สลิปไม่ผ่าน ${no}`,
           accent: "#B42318",
           lines: [
@@ -188,7 +224,7 @@ export function buildNotifyMessage(event: NotifyEvent, d: NotifyData): LineMessa
     case "order_rejected":
       return flex(
         `ร้าน ${d.shopName} ไม่รับออเดอร์ ${no}`,
-        bubble({
+        card({
           title: `ร้านไม่รับออเดอร์ ${no}`,
           accent: "#B42318",
           lines: [
@@ -202,7 +238,7 @@ export function buildNotifyMessage(event: NotifyEvent, d: NotifyData): LineMessa
     case "order_expired":
       return flex(
         `ออเดอร์ ${no} หมดเวลา`,
-        bubble({
+        card({
           title: `ออเดอร์หมดเวลา ${no}`,
           accent: MUTED,
           lines: ["ออเดอร์นี้หมดเวลาแล้ว หากยังต้องการปริ้น สั่งใหม่ได้เลย"],
@@ -213,7 +249,7 @@ export function buildNotifyMessage(event: NotifyEvent, d: NotifyData): LineMessa
     case "order_cancelled":
       return flex(
         `ออเดอร์ ${no} ถูกยกเลิก`,
-        bubble({
+        card({
           title: `ยกเลิกออเดอร์ ${no}`,
           accent: MUTED,
           lines: [
@@ -227,7 +263,7 @@ export function buildNotifyMessage(event: NotifyEvent, d: NotifyData): LineMessa
     case "printing":
       return flex(
         `ร้าน ${d.shopName} กำลังปริ้นออเดอร์ ${no}`,
-        bubble({
+        card({
           title: `กำลังปริ้น ${no}`,
           lines: ["ร้านเริ่มปริ้นงานของคุณแล้ว", ...(eta ? [eta] : [])],
           buttons: [view],
@@ -238,7 +274,7 @@ export function buildNotifyMessage(event: NotifyEvent, d: NotifyData): LineMessa
       if (isPickup) {
         return flex(
           `ออเดอร์ ${no} พร้อมรับแล้วที่ ${d.shopName}`,
-          bubble({
+          card({
             title: `พร้อมรับแล้ว ${no}`,
             lines: [`รับที่ ${d.shopName}`, d.shopAddress, `แจ้งเลขออเดอร์ ${no} กับร้านตอนมารับ`],
             buttons: [view],
@@ -247,7 +283,7 @@ export function buildNotifyMessage(event: NotifyEvent, d: NotifyData): LineMessa
       }
       return flex(
         `ออเดอร์ ${no} ปริ้นเสร็จแล้ว กำลังหาไรเดอร์`,
-        bubble({
+        card({
           title: `ปริ้นเสร็จแล้ว ${no}`,
           lines: ["กำลังหาไรเดอร์มารับงานไปส่งให้คุณ"],
           buttons: [view],
@@ -258,7 +294,7 @@ export function buildNotifyMessage(event: NotifyEvent, d: NotifyData): LineMessa
     case "courier_requested":
       return flex(
         `เรียกไรเดอร์ให้ออเดอร์ ${no} แล้ว`,
-        bubble({
+        card({
           title: `เรียกไรเดอร์แล้ว ${no}`,
           lines: ["กำลังรอไรเดอร์รับงานจากร้าน"],
           buttons: [view],
@@ -272,7 +308,7 @@ export function buildNotifyMessage(event: NotifyEvent, d: NotifyData): LineMessa
       }
       return flex(
         `ไรเดอร์กำลังนำส่งออเดอร์ ${no}`,
-        bubble({
+        card({
           title: `กำลังจัดส่ง ${no}`,
           lines: ["ไรเดอร์รับงานแล้ว กำลังนำส่งถึงคุณ"],
           buttons,
@@ -283,7 +319,7 @@ export function buildNotifyMessage(event: NotifyEvent, d: NotifyData): LineMessa
     case "handed_over":
       return flex(
         `ร้านส่งมอบออเดอร์ ${no} แล้ว กรุณากดยืนยันรับของ`,
-        bubble({
+        card({
           title: `ร้านส่งมอบงานแล้ว ${no}`,
           lines: [
             "กรุณาตรวจงานให้เรียบร้อย แล้วกดยืนยันรับของ",
@@ -296,7 +332,7 @@ export function buildNotifyMessage(event: NotifyEvent, d: NotifyData): LineMessa
     case "completed":
       return flex(
         `ออเดอร์ ${no} เสร็จสมบูรณ์`,
-        bubble({
+        card({
           title: `เสร็จสมบูรณ์ ${no}`,
           lines: ["ขอบคุณที่ใช้ PrintGo"],
           buttons: [{ ...view, label: "ดูสรุปออเดอร์" }],
@@ -310,7 +346,7 @@ export function buildNotifyMessage(event: NotifyEvent, d: NotifyData): LineMessa
       return flex(
         // altText is what the phone's notification shows: short, no private content
         `ร้านมีคำถามเรื่องออเดอร์ ${no}`,
-        bubble({
+        card({
           title: `ข้อความจากร้าน ${no}`,
           lines: [`${d.shopName}: ${preview}`],
           buttons: [{ label: "ตอบร้าน", uri: d.liff(`/chats/${order.id}`), primary: true }],
