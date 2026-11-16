@@ -93,7 +93,7 @@ export default function ShopQueuePage() {
                 aria-labelledby={`col-${col.key}`}
                 className={cx(
                   "flex min-h-[60dvh] flex-col rounded-card p-2.5",
-                  col.hot && items.length ? "bg-accent-50 ring-1 ring-accent/30" : "bg-line/50",
+                  col.hot && items.length ? "bg-accent-50 ring-1 ring-accent/30" : "bg-column",
                 )}
               >
                 <h2
