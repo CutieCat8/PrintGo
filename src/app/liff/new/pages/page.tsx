@@ -236,6 +236,7 @@ function PageThumb({
   const canvas = useRef<HTMLCanvasElement>(null);
   const [visible, setVisible] = useState(false);
   const [state, setState] = useState<"idle" | "ready" | "failed">("idle");
+  const [reason, setReason] = useState<string | null>(null);
   const [url, setUrl] = useState<string | null>(null);
   const source = pickedFiles.get(file.key);
 
@@ -267,8 +268,10 @@ function PageThumb({
     let cancelled = false;
     const c = canvas.current;
     if (!c) return;
-    void drawPdfPage(file.key, source, page, c, box.current?.clientWidth || 120).then((ok) => {
-      if (!cancelled) setState(ok ? "ready" : "failed");
+    void drawPdfPage(file.key, source, page, c, box.current?.clientWidth || 120).then((err) => {
+      if (cancelled) return;
+      setReason(err);
+      setState(err ? "failed" : "ready");
     });
     return () => {
       cancelled = true;
@@ -300,6 +303,9 @@ function PageThumb({
             className={cx("absolute inset-0 size-full object-contain", grayscale && "grayscale")}
           />
         )
+      )}
+      {reason && (
+        <span className="mt-auto break-all text-[9px] leading-tight text-danger">{reason}</span>
       )}
     </span>
   );
