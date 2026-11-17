@@ -13,12 +13,13 @@ import {
   formatBytes,
   uploadToSignedUrl,
 } from "@/lib/client/files";
+import { pickedFiles } from "@/lib/client/pickedFiles";
 import { selectedPageCount } from "@/lib/pages";
 import { FlowFooter, filesUploaded, pagesPerCopy } from "../_components/OrderFlow";
 import { ORDER_STEPS } from "../_components/steps";
 
 /** File contents live here only while the page is open (needed to retry an upload). */
-const picked = new Map<string, File>();
+const picked = pickedFiles;
 const uploads = new Map<string, AbortController>();
 
 const WARNING_TEXT = "ไฟล์นี้อาจมีรหัสผ่านหรือเปิดไม่ได้ ร้านอาจปริ้นให้ไม่ได้";
