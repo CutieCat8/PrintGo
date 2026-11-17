@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef, useState } from "react";
-import { Button, Icon, Input, PageShell, Segmented, Skeleton, cx } from "@/components/ui";
+import { Button, Icon, Input, Modal, PageShell, Segmented, Skeleton, cx } from "@/components/ui";
 import { updateFile, type DraftFile } from "@/lib/client/draft";
 import { closePdf, drawPdfPage } from "@/lib/client/pagePreview";
 import { pickedFiles } from "@/lib/client/pickedFiles";
@@ -56,6 +56,8 @@ function Picker({ file, total }: { file: DraftFile; total: number }) {
   const [mode, setMode] = useState<Mode>(start.length > 0 ? "some" : "all");
   const [pages, setPages] = useState<Set<number>>(new Set(start));
   const [text, setText] = useState(start.length > 0 ? formatRanges(start) : "");
+  /** Page shown large in the viewer (1-based), null = closed. */
+  const [zoom, setZoom] = useState<number | null>(null);
 
   const parsed = text.trim() === "" ? null : parsePageRange(text, total);
   const error = parsed && !parsed.ok ? parsed.message : null;
@@ -157,7 +159,7 @@ function Picker({ file, total }: { file: DraftFile; total: number }) {
                 {all.map((p) => {
                   const on = pages.has(p);
                   return (
-                    <li key={p}>
+                    <li key={p} className="relative">
                       <button
                         type="button"
                         role="checkbox"
@@ -191,6 +193,14 @@ function Picker({ file, total }: { file: DraftFile; total: number }) {
                           {p}
                         </span>
                       </button>
+                      <button
+                        type="button"
+                        aria-label={`ดูหน้า ${p} ขยาย`}
+                        onClick={() => setZoom(p)}
+                        className="absolute top-1 right-1 flex size-9 items-center justify-center rounded-full bg-white/90 text-ink shadow-sm ring-1 ring-line transition hover:bg-white"
+                      >
+                        <Icon name="zoom" className="size-5" />
+                      </button>
                     </li>
                   );
                 })}
@@ -203,6 +213,51 @@ function Picker({ file, total }: { file: DraftFile; total: number }) {
           </>
         )}
       </div>
+      <Modal
+        open={zoom !== null}
+        onClose={() => setZoom(null)}
+        title={zoom === null ? "ตัวอย่างหน้า" : `ตัวอย่างหน้า ${zoom} จาก ${total}`}
+        footer={
+          zoom === null ? undefined : (
+            <div className="grid w-full grid-cols-[auto_1fr_auto] items-center gap-2">
+              <Button
+                variant="secondary"
+                aria-label="หน้าก่อนหน้า"
+                disabled={zoom <= 1}
+                onClick={() => setZoom(zoom - 1)}
+              >
+                <Icon name="back" />
+              </Button>
+              <Button
+                variant={pages.has(zoom) ? "secondary" : "primary"}
+                onClick={() => toggle(zoom)}
+              >
+                {pages.has(zoom) ? "ยกเลิกเลือกหน้านี้" : "เลือกหน้านี้"}
+              </Button>
+              <Button
+                variant="secondary"
+                aria-label="หน้าถัดไป"
+                disabled={zoom >= total}
+                onClick={() => setZoom(zoom + 1)}
+              >
+                <Icon name="next" />
+              </Button>
+            </div>
+          )
+        }
+      >
+        {zoom !== null && (
+          <ZoomedPage
+            key={zoom}
+            file={file}
+            page={zoom}
+            grayscale={file.color === "bw"}
+            onSwipe={(dir) =>
+              setZoom((z) => (z === null ? z : Math.min(total, Math.max(1, z + dir))))
+            }
+          />
+        )}
+      </Modal>
     </PageShell>
   );
 }
@@ -308,5 +363,106 @@ function PageThumb({
         <span className="mt-auto break-all text-[9px] leading-tight text-danger">{reason}</span>
       )}
     </span>
+  );
+}
+
+/** One page drawn large for checking its content. Swipe left/right to change page. */
+function ZoomedPage({
+  file,
+  page,
+  grayscale,
+  onSwipe,
+}: {
+  file: DraftFile;
+  page: number;
+  grayscale: boolean;
+  onSwipe: (direction: -1 | 1) => void;
+}) {
+  const canvas = useRef<HTMLCanvasElement>(null);
+  const touchX = useRef<number | null>(null);
+  const [status, setStatus] = useState<"loading" | "ready" | "failed">("loading");
+  const [reason, setReason] = useState<string | null>(null);
+  const [image, setImage] = useState<string | null>(null);
+  const source = pickedFiles.get(file.key);
+
+  useEffect(() => {
+    if (!source) return;
+    let cancelled = false;
+    if (source.type !== "application/pdf") {
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (cancelled) return;
+        setImage(String(reader.result));
+        setStatus("ready");
+      };
+      reader.onerror = () => {
+        if (!cancelled) setStatus("failed");
+      };
+      reader.readAsDataURL(source);
+      return () => {
+        cancelled = true;
+      };
+    }
+    const c = canvas.current;
+    if (!c) return;
+    const width = Math.min(window.innerWidth - 72, 520);
+    void drawPdfPage(file.key, source, page, c, width).then((err) => {
+      if (cancelled) return;
+      setReason(err);
+      setStatus(err ? "failed" : "ready");
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [source, file.key, page]);
+
+  const shade = cx(
+    "mx-auto max-h-[60dvh] max-w-full rounded-md bg-white ring-1 ring-line",
+    grayscale && "grayscale",
+  );
+
+  return (
+    <div
+      className="flex min-h-48 flex-col items-center justify-center"
+      onTouchStart={(e) => {
+        touchX.current = e.touches[0]?.clientX ?? null;
+      }}
+      onTouchEnd={(e) => {
+        const start = touchX.current;
+        touchX.current = null;
+        const end = e.changedTouches[0]?.clientX;
+        if (start === null || end === undefined) return;
+        if (end - start > 60) onSwipe(-1);
+        else if (start - end > 60) onSwipe(1);
+      }}
+    >
+      {!source && (
+        <p className="py-10 text-center text-sm text-ink-muted">
+          ไม่มีตัวอย่างหน้านี้ในเครื่อง กรุณาเลือกไฟล์ใหม่อีกครั้ง
+        </p>
+      )}
+      {status === "loading" && source && (
+        <p role="status" className="py-10 text-sm text-ink-muted">
+          กำลังโหลดตัวอย่าง…
+        </p>
+      )}
+      {status === "failed" && (
+        <p role="alert" className="py-10 text-center text-sm text-danger">
+          แสดงตัวอย่างหน้านี้ไม่ได้{reason ? ` (${reason})` : ""}
+        </p>
+      )}
+      {source?.type === "application/pdf" ? (
+        <canvas
+          ref={canvas}
+          aria-label={`ตัวอย่างหน้า ${page}`}
+          className={cx(shade, status !== "ready" && "hidden")}
+        />
+      ) : (
+        image && (
+          // eslint-disable-next-line @next/next/no-img-element -- local data URL
+          <img src={image} alt={`ตัวอย่างหน้า ${page}`} className={shade} />
+        )
+      )}
+    </div>
   );
 }
