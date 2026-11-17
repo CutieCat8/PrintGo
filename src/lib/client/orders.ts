@@ -65,8 +65,8 @@ export function orderSteps(
     title,
     state:
       o.status === "completed" || i < current ? "done" : i === current ? "current" : "upcoming",
-    // waiting for the customer to pay: the progress list shows a spinner on that step
-    busy: i === current && o.status === "awaiting_payment",
+    // every in-progress step is something the customer is waiting on: spinner on the current one
+    busy: i === current && o.status !== "completed",
   }));
 }
 

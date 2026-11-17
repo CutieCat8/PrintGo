@@ -76,13 +76,24 @@ describe("orderSteps", () => {
     ]);
   });
 
-  it("only the current step of an order waiting for payment is busy (spinner)", () => {
+  it("the current step of every unfinished order is busy (spinner), nothing else", () => {
     const base = { fulfillment: "pickup" as const, paymentDeadline: "x", payment: null };
     const waiting = orderSteps({ ...base, status: "awaiting_payment" });
     expect(waiting.map((s) => Boolean(s.busy))).toEqual([false, true, false, false, false, false]);
-    for (const status of ["submitted", "paid", "printing", "ready", "completed"] as const) {
-      expect(orderSteps({ ...base, status }).some((s) => s.busy)).toBe(false);
+    for (const status of ["submitted", "paid", "printing", "ready"] as const) {
+      const steps = orderSteps({ ...base, status });
+      expect(steps.filter((s) => s.busy).map((s) => s.key)).toEqual([status]);
     }
+    const delivery = { ...base, fulfillment: "delivery" as const };
+    for (const status of ["courier_requested", "in_transit"] as const) {
+      expect(
+        orderSteps({ ...delivery, status })
+          .filter((s) => s.busy)
+          .map((s) => s.key),
+      ).toEqual([status]);
+    }
+    expect(orderSteps({ ...base, status: "completed" }).some((s) => s.busy)).toBe(false);
+    expect(orderSteps({ ...base, status: "cancelled" }).some((s) => s.busy)).toBe(false);
   });
 
   it("delivery has the courier steps", () => {
