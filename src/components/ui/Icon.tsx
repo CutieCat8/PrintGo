@@ -126,6 +126,25 @@ const PATHS = {
       <path d="M16.5 16.5 21 21M11 8v6M8 11h6" />
     </>
   ),
+  search: (
+    <>
+      <circle cx="10.5" cy="10.5" r="6.5" />
+      <path d="M15.5 15.5 21 21" />
+    </>
+  ),
+  scooter: (
+    <>
+      <circle cx="5.5" cy="17.5" r="2.5" />
+      <circle cx="18.5" cy="17.5" r="2.5" />
+      <path d="M8 17.5h8M3.5 12.5H9l2 5M18 15l-2.5-8.5H13" />
+    </>
+  ),
+  home: (
+    <>
+      <path d="M3.5 11 12 4l8.5 7" />
+      <path d="M5.5 9.5V20h13V9.5M10 20v-5.5h4V20" />
+    </>
+  ),
   download: (
     <>
       <path d="M12 4v12M7 11l5 5 5-5" />

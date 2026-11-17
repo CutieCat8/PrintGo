@@ -20,6 +20,7 @@ import {
   useToast,
 } from "@/components/ui";
 import { ChatRoom } from "@/components/ui/ChatRoom";
+import { RiderTracker } from "../../_components/RiderTracker";
 import { api, errorMessage, isApiClientError } from "@/lib/client/api";
 import {
   UNIT_LABEL,
@@ -397,6 +398,9 @@ function StatusHero({
         <Hero tone="done" label="เสร็จสิ้น" value="ขอบคุณที่ใช้ PrintGo" />
       ) : o.status === "ready" && o.fulfillment === "pickup" ? (
         <Hero tone="go" label="พร้อมรับที่ร้านแล้ว" value={o.shop.name} />
+      ) : o.fulfillment === "delivery" &&
+        (o.status === "courier_requested" || o.status === "in_transit") ? (
+        <RiderTracker orderId={o.id} status={o.status} now={now} />
       ) : o.status === "courier_requested" || o.status === "in_transit" || o.status === "ready" ? (
         <Hero
           tone="go"

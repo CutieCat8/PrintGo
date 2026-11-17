@@ -1,0 +1,141 @@
+"use client";
+
+import { useState } from "react";
+import { Icon, cx, type IconName } from "@/components/ui";
+import { formatTime } from "@/lib/client/format";
+import {
+  RIDER_STAGES,
+  STAGE_SECONDS,
+  riderStage,
+  sampleArrivalWindow,
+} from "@/lib/client/riderTracker";
+import type { OrderStatus } from "@/lib/db/types";
+
+const ICONS: IconName[] = ["search", "scooter", "box", "home"];
+
+/** When the card first appeared for this order, kept per tab so a reload does not restart the demo. */
+function startedAtFor(orderId: string, now: Date): number {
+  const key = `printgo:rider-sim:${orderId}`;
+  try {
+    const saved = Number(sessionStorage.getItem(key));
+    if (Number.isFinite(saved) && saved > 0) return saved;
+    sessionStorage.setItem(key, String(now.getTime()));
+  } catch {
+    // storage blocked: the simulation simply restarts on reload
+  }
+  return now.getTime();
+}
+
+/**
+ * Grab-style delivery tracking: arrival window, what the rider is doing, and four stages in a row.
+ * SIMULATED (6 s per stage) until a real rider feed exists, and it says so on the card.
+ */
+export function RiderTracker({
+  orderId,
+  status,
+  now,
+}: {
+  orderId: string;
+  status: OrderStatus;
+  now: Date;
+}) {
+  const [startedAt] = useState(() => startedAtFor(orderId, now));
+  const stage = riderStage(status, now.getTime() - startedAt);
+  const current = RIDER_STAGES[stage];
+  const window = sampleArrivalWindow(startedAt);
+  const arrived = stage === 3;
+
+  return (
+    <section
+      aria-label="ติดตามไรเดอร์"
+      className="rounded-card border border-line-strong bg-surface px-5 py-5"
+    >
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <p className="font-display text-3xl leading-tight font-bold text-ink tabular-nums">
+            {arrived
+              ? `${formatTime(now)} น.`
+              : `${formatTime(window.from)} - ${formatTime(window.to)} น.`}
+          </p>
+          <p role="status" aria-live="polite" className="mt-1 text-lg font-semibold text-ink">
+            {current.title}
+          </p>
+          <p className="text-sm text-ink-muted">{current.hint}</p>
+        </div>
+        <span
+          aria-hidden="true"
+          className="flex size-16 shrink-0 items-center justify-center rounded-full border border-line-strong bg-surface text-ink"
+        >
+          <Icon name={ICONS[stage]!} className="size-8" />
+        </span>
+      </div>
+
+      <ol className="mt-6 flex items-center" aria-label="ขั้นตอนการจัดส่ง">
+        {RIDER_STAGES.map((s, i) => {
+          const reached = i <= stage;
+          const last = i === RIDER_STAGES.length - 1;
+          return (
+            <li
+              key={s.key}
+              aria-current={i === stage ? "step" : undefined}
+              className={cx("flex items-center", !last && "flex-1")}
+            >
+              <span className="flex w-16 shrink-0 flex-col items-center gap-1.5">
+                <span
+                  className={cx(
+                    "flex size-10 items-center justify-center rounded-full border transition-colors duration-300 motion-reduce:transition-none",
+                    reached
+                      ? "border-ink bg-surface text-ink"
+                      : "border-line bg-surface text-ink-subtle",
+                  )}
+                >
+                  <Icon name={ICONS[i]!} className="size-5" />
+                </span>
+                <span
+                  className={cx(
+                    "text-center text-xs leading-tight text-balance",
+                    reached ? "font-semibold text-ink" : "text-ink-subtle",
+                  )}
+                >
+                  {s.label}
+                  <span className="sr-only">
+                    {i < stage
+                      ? " (เสร็จแล้ว)"
+                      : i === stage
+                        ? " (ขั้นตอนปัจจุบัน)"
+                        : " (ยังไม่ถึง)"}
+                  </span>
+                </span>
+              </span>
+              {!last && (
+                <span
+                  aria-hidden="true"
+                  className="relative mx-1 mb-6 h-1 flex-1 rounded-full bg-line"
+                >
+                  <span
+                    key={i < stage ? "done" : i === stage ? `run-${stage}` : "todo"}
+                    className={cx(
+                      "absolute inset-y-0 left-0 rounded-full bg-ink",
+                      i < stage && "w-full",
+                      i > stage && "w-0",
+                      i === stage &&
+                        "w-0 motion-safe:animate-[rider-fill_var(--stage-s)_linear_forwards] motion-reduce:w-1/2",
+                    )}
+                    style={{ ["--stage-s" as string]: `${STAGE_SECONDS}s` }}
+                  />
+                </span>
+              )}
+            </li>
+          );
+        })}
+      </ol>
+
+      <p className="mt-4 text-sm text-ink-muted">
+        {arrived ? "ขอบคุณที่ใช้ PrintGo" : "เราจะแจ้งเมื่อไรเดอร์ส่งของถึงคุณ"}
+      </p>
+      <p className="mt-1 text-xs text-ink-subtle">
+        โหมดจำลอง: สถานะไรเดอร์และเวลาเป็นตัวอย่าง ยังไม่ได้เชื่อมระบบไรเดอร์จริง
+      </p>
+    </section>
+  );
+}
