@@ -1,4 +1,5 @@
-import type { PDFDocumentProxy } from "pdfjs-dist";
+import type { PDFDocumentProxy } from "pdfjs-dist/legacy/build/pdf.mjs";
+import { loadPdfjs } from "./pdfjs";
 
 /** Opened PDFs by draft file key, so each tile does not re-parse the whole file. */
 const docs = new Map<string, Promise<PDFDocumentProxy>>();
@@ -7,13 +8,7 @@ async function openPdf(key: string, file: File): Promise<PDFDocumentProxy> {
   let doc = docs.get(key);
   if (!doc) {
     doc = (async () => {
-      const pdfjs = await import("pdfjs-dist");
-      if (!pdfjs.GlobalWorkerOptions.workerSrc) {
-        pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-          "pdfjs-dist/build/pdf.worker.min.mjs",
-          import.meta.url,
-        ).toString();
-      }
+      const pdfjs = await loadPdfjs();
       return pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
     })();
     docs.set(key, doc);
@@ -22,14 +17,14 @@ async function openPdf(key: string, file: File): Promise<PDFDocumentProxy> {
   return doc;
 }
 
-/** Draws one PDF page (1-based) onto the canvas at the given CSS width. Returns false on failure. */
+/** Draws one PDF page (1-based) onto the canvas at the given CSS width. Returns null when drawn, else the reason it failed. */
 export async function drawPdfPage(
   key: string,
   file: File,
   pageNumber: number,
   canvas: HTMLCanvasElement,
   cssWidth: number,
-): Promise<boolean> {
+): Promise<string | null> {
   try {
     const page = await (await openPdf(key, file)).getPage(pageNumber);
     const base = page.getViewport({ scale: 1 });
@@ -39,9 +34,10 @@ export async function drawPdfPage(
     canvas.height = Math.floor(viewport.height);
     await page.render({ canvas, viewport }).promise;
     page.cleanup();
-    return true;
-  } catch {
-    return false;
+    return null;
+  } catch (e) {
+    console.error("page preview failed", e);
+    return e instanceof Error ? `${e.name}: ${e.message}` : String(e);
   }
 }
 

@@ -1,5 +1,6 @@
 import { USE_MOCK } from "./api";
 import { ApiClientError } from "./http";
+import { loadPdfjs } from "./pdfjs";
 
 /** Client-side checks for the order form (the API checks again; DECISIONS O6 default). */
 export const FILE_RULES = {
@@ -35,13 +36,7 @@ export type PageCountResult =
 export async function countPages(file: File): Promise<PageCountResult> {
   if (file.type !== "application/pdf") return { ok: true, pages: 1 };
   try {
-    const pdfjs = await import("pdfjs-dist");
-    if (!pdfjs.GlobalWorkerOptions.workerSrc) {
-      pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-        "pdfjs-dist/build/pdf.worker.min.mjs",
-        import.meta.url,
-      ).toString();
-    }
+    const pdfjs = await loadPdfjs();
     const task = pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) });
     try {
       const doc = await task.promise;
