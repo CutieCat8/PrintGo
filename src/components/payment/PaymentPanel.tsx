@@ -172,45 +172,43 @@ function Panel({ orderId, amountSatang, deadline, onVerified }: PaymentPanelProp
                     "สลิปไม่ผ่าน กรุณาตรวจสอบแล้วส่งใหม่"}
                 </p>
               )}
-              <label
-                className={cx(
-                  "flex min-h-32 cursor-pointer flex-col items-center justify-center gap-1.5 rounded-card border-2 border-dashed px-4 py-6 text-center transition",
-                  "has-[:focus-visible]:border-accent-ink has-[:focus-visible]:ring-3 has-[:focus-visible]:ring-accent-ink/40",
-                  file
-                    ? "border-line-strong bg-surface text-ink-muted"
-                    : "border-ink bg-brand-50 text-ink hover:bg-brand-100",
-                  (busy || !charge.data || !!charge.error || !!order.error) &&
-                    "cursor-not-allowed opacity-50",
-                )}
-              >
-                <Icon name="upload" className="size-8" />
-                <span className="text-lg font-semibold">
-                  {file ? "เปลี่ยนรูปสลิป" : "อัปโหลดสลิป"}
-                </span>
-                <span className="text-sm text-ink-muted">
-                  แตะที่นี่เพื่อเลือกรูปสลิปจากเครื่อง · JPEG/PNG ไม่เกิน 5 MB
-                </span>
-                <input
-                  type="file"
-                  accept="image/jpeg,image/png"
-                  disabled={busy || !charge.data || !!charge.error || !!order.error}
-                  className="sr-only"
-                  onChange={(event) => {
-                    const selected = event.target.files?.[0];
-                    event.target.value = "";
-                    if (!selected) return;
-                    const problem = slipFileProblem(selected);
-                    setMessage(problem);
-                    if (!problem) {
-                      setFile(selected);
-                      setPreview(URL.createObjectURL(selected));
-                    } else {
-                      setFile(null);
-                      setPreview(null);
-                    }
-                  }}
-                />
-              </label>
+              {!file && (
+                <label
+                  className={cx(
+                    "flex min-h-32 cursor-pointer flex-col items-center justify-center gap-1.5 rounded-card border-2 border-dashed px-4 py-6 text-center transition",
+                    "has-[:focus-visible]:border-accent-ink has-[:focus-visible]:ring-3 has-[:focus-visible]:ring-accent-ink/40",
+                    "border-ink bg-brand-50 text-ink hover:bg-brand-100",
+                    (busy || !charge.data || !!charge.error || !!order.error) &&
+                      "cursor-not-allowed opacity-50",
+                  )}
+                >
+                  <Icon name="upload" className="size-8" />
+                  <span className="text-lg font-semibold">อัปโหลดสลิป</span>
+                  <span className="text-sm text-ink-muted">
+                    แตะที่นี่เพื่อเลือกรูปสลิปจากเครื่อง · JPEG/PNG ไม่เกิน 5 MB
+                  </span>
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png"
+                    disabled={busy || !charge.data || !!charge.error || !!order.error}
+                    className="sr-only"
+                    onChange={(event) => {
+                      const selected = event.target.files?.[0];
+                      event.target.value = "";
+                      if (!selected) return;
+                      const problem = slipFileProblem(selected);
+                      setMessage(problem);
+                      if (!problem) {
+                        setFile(selected);
+                        setPreview(URL.createObjectURL(selected));
+                      } else {
+                        setFile(null);
+                        setPreview(null);
+                      }
+                    }}
+                  />
+                </label>
+              )}
               {file && (
                 <div className="space-y-2">
                   {preview && (
@@ -223,7 +221,7 @@ function Panel({ orderId, amountSatang, deadline, onVerified }: PaymentPanelProp
                   )}
                   <p className="break-all text-sm">{file.name}</p>
                   <Button
-                    variant="ghost"
+                    variant="secondary"
                     disabled={busy}
                     onClick={() => {
                       setFile(null);
