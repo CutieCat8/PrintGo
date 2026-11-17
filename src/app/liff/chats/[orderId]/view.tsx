@@ -2,21 +2,32 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { ErrorState, PageShell, Skeleton, StatusBadge } from "@/components/ui";
+import { ErrorState, PageShell, Skeleton } from "@/components/ui";
 import { ChatRoom } from "@/components/ui/ChatRoom";
 import { errorMessage } from "@/lib/client/api";
-import { isTerminal, useOrder } from "@/lib/client/hooks";
+import { isTerminal, useNow, useOrder } from "@/lib/client/hooks";
+import { CustomerStatusBadge } from "../../_components/CustomerStatusBadge";
 
 export function ChatRoomPage() {
   const { orderId } = useParams<{ orderId: string }>();
   const order = useOrder(orderId, "customer");
   const o = order.data;
+  const now = useNow();
 
   return (
     <PageShell
       title={o ? o.shop.name : "แชท"}
       backHref="/liff/chats"
-      actions={o && <StatusBadge status={o.status} fulfillment={o.fulfillment} />}
+      actions={
+        o && (
+          <CustomerStatusBadge
+            orderId={o.id}
+            status={o.status}
+            fulfillment={o.fulfillment}
+            now={now}
+          />
+        )
+      }
     >
       {order.isLoading ? (
         <Skeleton className="h-80" />
