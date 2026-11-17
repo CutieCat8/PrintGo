@@ -409,7 +409,7 @@ function StatusHero({
       ) : o.status === "ready" && o.fulfillment === "pickup" ? (
         <Hero tone="go" label="พร้อมรับที่ร้านแล้ว" value={o.shop.name} />
       ) : sim ? (
-        <RiderTracker simulation={sim} now={now} />
+        <RiderTracker simulation={sim} now={now} onReceive={receive} receiving={busy} />
       ) : o.status === "courier_requested" || o.status === "in_transit" || o.status === "ready" ? (
         <Hero
           tone="go"

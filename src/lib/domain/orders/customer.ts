@@ -109,7 +109,10 @@ export async function cancelCustomerOrder(customerId: string, orderId: string): 
  * shop handed it over (`handed_over_at`); before that the customer cannot close the order from
  * home. If the customer does not answer within 10 minutes the system confirms (expire.ts).
  */
-export async function receiveCustomerOrder(customerId: string, orderId: string): Promise<OrderView> {
+export async function receiveCustomerOrder(
+  customerId: string,
+  orderId: string,
+): Promise<OrderView> {
   const db = getServiceClient();
   const own = await expireIfDue(await readOwnOrder(db, customerId, orderId));
   let updated = own;
@@ -120,9 +123,40 @@ export async function receiveCustomerOrder(customerId: string, orderId: string):
       });
     }
     try {
-      updated = await transition({ orderId: own.id, from: "ready", to: "completed", actor: "customer" });
+      updated = await transition({
+        orderId: own.id,
+        from: "ready",
+        to: "completed",
+        actor: "customer",
+      });
     } catch (err) {
       // The system confirmed it at the same moment: answer with the fresh row instead of an error.
+      if (!(err instanceof ApiError) || err.code !== "ORDER_INVALID_TRANSITION") throw err;
+      updated = await readOwnOrder(db, customerId, orderId);
+      if (updated.status !== "completed") throw err;
+    }
+  } else if (
+    own.fulfillment === "delivery" &&
+    (own.status === "courier_requested" || own.status === "in_transit")
+  ) {
+    // Delivery: the customer confirms it arrived. No courier feed is connected yet, so an order
+    // still at courier_requested first takes the system step to in_transit (CONTRACTS section 4).
+    try {
+      if (own.status === "courier_requested") {
+        await transition({
+          orderId: own.id,
+          from: "courier_requested",
+          to: "in_transit",
+          actor: "system",
+        });
+      }
+      updated = await transition({
+        orderId: own.id,
+        from: "in_transit",
+        to: "completed",
+        actor: "customer",
+      });
+    } catch (err) {
       if (!(err instanceof ApiError) || err.code !== "ORDER_INVALID_TRANSITION") throw err;
       updated = await readOwnOrder(db, customerId, orderId);
       if (updated.status !== "completed") throw err;

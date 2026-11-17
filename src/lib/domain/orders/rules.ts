@@ -162,9 +162,11 @@ export const TRANSITIONS: readonly TransitionRule[] = [
     notify: "in_transit",
   },
   {
+    // The customer confirms the delivery arrived (receiveCustomerOrder); until a real courier feed
+    // exists this is also what closes a delivery order in the demo.
     from: ["in_transit"],
     to: "completed",
-    actors: ["system", "admin"],
+    actors: ["system", "admin", "customer"],
     patchKeys: [],
     effects: ["set_completed_at"],
     notify: "completed",

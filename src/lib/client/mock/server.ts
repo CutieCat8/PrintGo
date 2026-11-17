@@ -622,6 +622,11 @@ export const mockApi: Api = {
     if (o.status === "ready") {
       if (o.fulfillment !== "pickup" || !o.handedOverAt) fail("ORDER_INVALID_TRANSITION");
       move(o, ["ready"], "completed", { completedAt: nowIso() });
+    } else if (
+      o.fulfillment === "delivery" &&
+      (o.status === "courier_requested" || o.status === "in_transit")
+    ) {
+      move(o, ["courier_requested", "in_transit"], "completed", { completedAt: nowIso() });
     } else if (o.status !== "completed") fail("ORDER_INVALID_TRANSITION");
     return toOrder(o, "customer");
   },
@@ -876,7 +881,9 @@ export const mockApi: Api = {
 
   async getShopEarnings() {
     await gate();
-    const mine = store().orders.filter((o) => o.shopId === store().myShopId && o.status === "completed");
+    const mine = store().orders.filter(
+      (o) => o.shopId === store().myShopId && o.status === "completed",
+    );
     const dayStart = new Date().setHours(0, 0, 0, 0);
     const items = mine
       .filter((o) => o.completedAt && o.printSubtotalSatang)

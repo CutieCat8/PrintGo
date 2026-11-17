@@ -78,7 +78,7 @@ Storage bucket: `order-files` (private) · `payment-slips` (private) · `settlem
 | `ready` | `completed` | ลูกค้า (กดรับของหลังร้านส่งมอบ) · ระบบ (ครบ 10 นาทีหลังส่งมอบโดยลูกค้าไม่กด) · แอดมิน (ปิดงานเองเมื่อมีข้อโต้แย้ง ต้องใส่เหตุผล) | เฉพาะ `fulfillment=pickup` → ตั้ง `completed_at` · ร้านส่งมอบด้วย `POST /api/shop/orders/:id/handover` (บันทึก `handed_over_at` ไม่เปลี่ยนสถานะ) |
 | `ready` | `courier_requested` | ระบบ (ทันทีหลังร้านกด mark-ready ของออเดอร์ delivery) หรือแอดมิน | เฉพาะ `fulfillment=delivery` → `createDeliveryForOrder()` → notify |
 | `courier_requested` | `in_transit` | ระบบ/แอดมิน | |
-| `in_transit` | `completed` | ระบบ/แอดมิน | ตั้ง `completed_at` |
+| `in_transit` | `completed` | ระบบ/แอดมิน/ลูกค้า (กดรับของ `POST /api/liff/orders/:id/receive`; ออเดอร์ที่ยังเป็น `courier_requested` ระบบเลื่อนเป็น `in_transit` ให้ก่อนในคำขอเดียวกัน — เดโมจนกว่าจะเชื่อมไรเดอร์จริง) | ตั้ง `completed_at` |
 ห้ามข้ามขั้นนอกตารางนี้ · การเปลี่ยนต้องเป็น **conditional atomic update** (`update … where id=$1 and status=$from returning *`) ถ้าไม่มีแถวคืน → `ORDER_INVALID_TRANSITION`
 สถานะปลายทาง: `completed`, `rejected`, `cancelled`, `expired`
 
@@ -113,7 +113,7 @@ shopPayout        = printSubtotal                                          // �
 | `GET /api/liff/orders` | – | `Order[]` ของฉัน ใหม่→เก่า |
 | `GET /api/liff/orders/:id` | – | `OrderDetail` (รวม files, services, payment, delivery, shop ย่อ) |
 | `POST /api/liff/orders/:id/cancel` | – | `Order` |
-| `POST /api/liff/orders/:id/receive` | – (เฉพาะ pickup `ready` ที่ร้านส่งมอบแล้ว; ไม่งั้น 409) | `Order` (`completed`) |
+| `POST /api/liff/orders/:id/receive` | – (pickup `ready` ที่ร้านส่งมอบแล้ว · หรือ delivery ที่ `courier_requested`/`in_transit`; ไม่งั้น 409) | `Order` (`completed`) |
 | `GET /api/liff/orders/:id/messages` | `?after=<iso>` | `Message[]` |
 | `POST /api/liff/orders/:id/messages` | `{ body }` (≤ 1000 ตัวอักษร) · ออเดอร์สถานะปลายทาง → `CHAT_CLOSED` | `Message` |
 | `POST /api/liff/orders/:id/messages/read` | – (ตั้ง `read_at` ให้ข้อความจากร้านที่ยังไม่อ่านทั้งหมดของออเดอร์นี้) | `{ unreadMessageCount: 0 }` |

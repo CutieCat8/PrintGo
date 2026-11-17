@@ -1,6 +1,6 @@
 "use client";
 
-import { Icon, cx, type IconName } from "@/components/ui";
+import { Button, Icon, cx, type IconName } from "@/components/ui";
 import { formatTime } from "@/lib/client/format";
 import {
   RIDER_STAGES,
@@ -18,9 +18,14 @@ const ICONS: IconName[] = ["search", "scooter", "box", "home"];
 export function RiderTracker({
   simulation: { startedAt, stage },
   now,
+  onReceive,
+  receiving = false,
 }: {
   simulation: { startedAt: number; stage: RiderStage };
   now: Date;
+  /** Closes the order (customer confirms the parcel arrived). Shown once the stage is "arrived". */
+  onReceive?: () => void;
+  receiving?: boolean;
 }) {
   const current = RIDER_STAGES[stage];
   const window = sampleArrivalWindow(startedAt);
@@ -111,9 +116,15 @@ export function RiderTracker({
         })}
       </ol>
 
-      <p className="mt-4 text-sm text-ink-muted">
-        {arrived ? "ขอบคุณที่ใช้ PrintGo" : "เราจะแจ้งเมื่อไรเดอร์ส่งของถึงคุณ"}
-      </p>
+      {arrived && onReceive ? (
+        <Button size="lg" fullWidth className="mt-5" loading={receiving} onClick={onReceive}>
+          ได้รับของแล้ว
+        </Button>
+      ) : (
+        <p className="mt-4 text-sm text-ink-muted">
+          {arrived ? "ขอบคุณที่ใช้ PrintGo" : "เราจะแจ้งเมื่อไรเดอร์ส่งของถึงคุณ"}
+        </p>
+      )}
       <p className="mt-1 text-xs text-ink-subtle">
         โหมดจำลอง: สถานะไรเดอร์และเวลาเป็นตัวอย่าง ยังไม่ได้เชื่อมระบบไรเดอร์จริง
       </p>
