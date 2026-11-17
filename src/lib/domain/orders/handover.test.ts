@@ -152,6 +152,28 @@ describe("POST /api/liff/orders/:id/receive", () => {
     await expect(receiveCustomerOrder(CUSTOMER, o.id)).rejects.toMatchObject({ status: 409 });
   });
 
+  it("a delivery order out for delivery is closed by the customer, also from courier_requested", async () => {
+    for (const status of ["courier_requested", "in_transit"] as const) {
+      const o = seed({ fulfillment: "delivery", status });
+      const view = await receiveCustomerOrder(CUSTOMER, o.id);
+      expect(view.status).toBe("completed");
+      expect(stored(o)).toMatchObject({ status: "completed", completed_at: T });
+    }
+  });
+
+  it("someone else's delivery order is a 404 and stays untouched", async () => {
+    const o = seed({ fulfillment: "delivery", status: "courier_requested" });
+    await expect(receiveCustomerOrder(OTHER_CUSTOMER, o.id)).rejects.toMatchObject({
+      status: 404,
+    });
+    expect(stored(o).status).toBe("courier_requested");
+  });
+
+  it("a pickup order is never closed through the delivery path", async () => {
+    const o = seed({ fulfillment: "pickup", status: "in_transit", handed_over_at: null });
+    await expect(receiveCustomerOrder(CUSTOMER, o.id)).rejects.toMatchObject({ status: 409 });
+  });
+
   it("someone else's order is a 404", async () => {
     const o = seed({ handed_over_at: before(MIN) });
     await expect(receiveCustomerOrder(OTHER_CUSTOMER, o.id)).rejects.toMatchObject({
