@@ -114,6 +114,12 @@ const PATHS = {
       <circle cx="12" cy="12" r="3" />
     </>
   ),
+  zoom: (
+    <>
+      <circle cx="11" cy="11" r="7" />
+      <path d="M16.5 16.5 21 21M11 8v6M8 11h6" />
+    </>
+  ),
   download: (
     <>
       <path d="M12 4v12M7 11l5 5 5-5" />
