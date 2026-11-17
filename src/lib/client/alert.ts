@@ -54,25 +54,42 @@ export async function unlockAudio(): Promise<boolean> {
   return c.state === "running";
 }
 
-/** Two short tones. Does nothing when muted or still blocked. */
-export function beep() {
+/**
+ * Two short tones, repeated `times` times about 1.4 s apart. All tones are scheduled on the audio
+ * clock in one go (no timers), so a background tab whose timers are throttled still plays them all.
+ * Does nothing when muted or still blocked.
+ */
+export function beep(times = 1) {
   if (!soundEnabled()) return;
   const c = context();
   if (!c || c.state !== "running") return;
-  const start = c.currentTime;
-  [880, 1320].forEach((freq, i) => {
-    const osc = c.createOscillator();
-    const gain = c.createGain();
-    osc.type = "sine";
-    osc.frequency.value = freq;
-    const t = start + i * 0.18;
-    gain.gain.setValueAtTime(0.0001, t);
-    gain.gain.exponentialRampToValueAtTime(0.25, t + 0.02);
-    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.16);
-    osc.connect(gain).connect(c.destination);
-    osc.start(t);
-    osc.stop(t + 0.17);
-  });
+  for (let r = 0; r < times; r++) {
+    const start = c.currentTime + r * 1.4;
+    [880, 1320].forEach((freq, i) => {
+      const osc = c.createOscillator();
+      const gain = c.createGain();
+      osc.type = "sine";
+      osc.frequency.value = freq;
+      const t = start + i * 0.18;
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.exponentialRampToValueAtTime(0.25, t + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.16);
+      osc.connect(gain).connect(c.destination);
+      osc.start(t);
+      osc.stop(t + 0.17);
+    });
+  }
+}
+
+let lastPushRing = 0;
+/** A push arrived (sent by public/sw.js): a new order rings 3 times, a customer message once. */
+export function ringForPush(kind: "order_new" | "chat_message") {
+  lastPushRing = Date.now();
+  beep(kind === "order_new" ? 3 : 1);
+}
+/** The polling alerts skip their beep when a push already rang a moment ago (no double sound). */
+export function pushRangRecently(withinMs = 20_000): boolean {
+  return Date.now() - lastPushRing < withinMs;
 }
 
 export function setTitleCount(count: number) {

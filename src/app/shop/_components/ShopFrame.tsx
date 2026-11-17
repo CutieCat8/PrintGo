@@ -18,6 +18,8 @@ import { api, errorMessage, isApiClientError } from "@/lib/client/api";
 import {
   audioBlocked,
   beep,
+  pushRangRecently,
+  ringForPush,
   setSoundEnabled,
   setTitleCount,
   soundEnabled,
@@ -121,7 +123,7 @@ function ActiveDashboard({ children }: { children: ReactNode }) {
     if (!before) return;
     const fresh = orders.data.filter((o) => !before.has(o.id) && o.status === "submitted");
     if (fresh.length) {
-      beep();
+      if (!pushRangRecently()) beep();
       toast(`ออเดอร์ใหม่ ${fresh.map((o) => o.orderNo).join(", ")}`, "info");
     }
   }, [orders.data, toast]);
@@ -132,8 +134,37 @@ function ActiveDashboard({ children }: { children: ReactNode }) {
     if (!chats.data) return;
     const prev = seenUnread.current;
     seenUnread.current = chats.data.totalUnread;
-    if (prev !== null && chats.data.totalUnread > prev) beep();
+    if (prev !== null && chats.data.totalUnread > prev && !pushRangRecently()) beep();
   }, [chats.data]);
+
+  // A push reached the service worker: ring now, even if this tab is in the background, and refresh
+  // the lists instead of waiting for the next poll
+  const refreshOrders = orders.mutate;
+  const refreshChats = chats.mutate;
+  useEffect(() => {
+    if (!("serviceWorker" in navigator)) return;
+    const onMessage = (e: MessageEvent) => {
+      const data = e.data as { type?: string; kind?: string } | null;
+      if (data?.type !== "printgo-push") return;
+      ringForPush(data.kind === "order_new" ? "order_new" : "chat_message");
+      void refreshOrders();
+      void refreshChats();
+    };
+    navigator.serviceWorker.addEventListener("message", onMessage);
+    return () => navigator.serviceWorker.removeEventListener("message", onMessage);
+  }, [refreshOrders, refreshChats]);
+
+  // Any click or key press on the dashboard unlocks the browser's audio, so the sound works after a
+  // reload without finding the "click here to enable sound" banner
+  useEffect(() => {
+    const unlock = () => void unlockAudio();
+    window.addEventListener("pointerdown", unlock, { once: true });
+    window.addEventListener("keydown", unlock, { once: true });
+    return () => {
+      window.removeEventListener("pointerdown", unlock);
+      window.removeEventListener("keydown", unlock);
+    };
+  }, []);
 
   useEffect(() => {
     setTitleCount(badge);
@@ -222,7 +253,8 @@ function PushBanner() {
   if (state === "denied") {
     return (
       <Banner tone="info">
-        เบราว์เซอร์บล็อกการแจ้งเตือนอยู่ — ไปที่การตั้งค่าเว็บไซต์แล้วอนุญาตการแจ้งเตือนเพื่อรับออเดอร์ตอนปิดหน้านี้
+        เบราว์เซอร์บล็อกการแจ้งเตือนอยู่ —
+        ไปที่การตั้งค่าเว็บไซต์แล้วอนุญาตการแจ้งเตือนเพื่อรับออเดอร์ตอนปิดหน้านี้
       </Banner>
     );
   }
@@ -352,7 +384,9 @@ function PauseSwitch() {
       onClick={toggle}
       className={cx(
         "flex min-h-11 items-center gap-2 rounded-full px-3 text-sm font-medium ring-1 disabled:opacity-60",
-        open ? "bg-brand-50 text-ink ring-line-strong" : "bg-warning-50 text-warning-ink ring-amber-300",
+        open
+          ? "bg-brand-50 text-ink ring-line-strong"
+          : "bg-warning-50 text-warning-ink ring-amber-300",
       )}
     >
       <span
