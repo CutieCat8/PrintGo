@@ -19,7 +19,17 @@ self.addEventListener("push", (event) => {
     renotify: Boolean(data.tag),
     data: { url: typeof data.url === "string" ? data.url : "/shop" },
   };
-  event.waitUntil(self.registration.showNotification(title, options));
+  // Also tell any open dashboard tab (even a background one) so it can play its own sound: the
+  // OS notification sound is not ours and may be muted. The message carries no personal data.
+  const kind = options.tag && options.tag.startsWith("order-") ? "order_new" : "chat_message";
+  event.waitUntil(
+    Promise.all([
+      self.registration.showNotification(title, options),
+      self.clients
+        .matchAll({ type: "window", includeUncontrolled: true })
+        .then((windows) => windows.forEach((c) => c.postMessage({ type: "printgo-push", kind }))),
+    ]),
+  );
 });
 
 /** Only a /shop page of this site may be opened: checked AFTER URL parsing, which strips tabs etc. */
