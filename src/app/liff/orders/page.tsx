@@ -9,7 +9,6 @@ import {
   Money,
   PageShell,
   SkeletonCard,
-  StatusBadge,
   buttonClasses,
   cx,
 } from "@/components/ui";
@@ -18,7 +17,10 @@ import { etaText, formatDayTime, formatTime } from "@/lib/client/format";
 import { useMyOrders, useNow } from "@/lib/client/hooks";
 import { customerMoney } from "@/lib/client/orders";
 import type { Order, OrderStatus } from "@/lib/db/types";
+import { CustomerStatusBadge } from "../_components/CustomerStatusBadge";
 import { LiffBottomNav } from "../_components/LiffBottomNav";
+import { riderSimulationActive, useRiderSimulation } from "../_components/useRiderSimulation";
+import { RIDER_STAGES } from "@/lib/client/riderTracker";
 import { UnreadBadge } from "../_components/UnreadBadge";
 
 type Tab = "active" | "done" | "stopped";
@@ -43,7 +45,12 @@ const TABS: { key: Tab; label: string; statuses: OrderStatus[] }[] = [
 /** C15: all my orders, filtered by tab. */
 export default function MyOrdersPage() {
   const orders = useMyOrders();
-  const now = useNow(30_000);
+  // The rider simulation steps every 6 s: tick every second while one is running so the list
+  // never lags behind the order page
+  const simulating = (orders.data ?? []).some((o) =>
+    riderSimulationActive(o.status, o.fulfillment),
+  );
+  const now = useNow(simulating ? 1_000 : 30_000);
   const [tab, setTab] = useState<Tab>("active");
   const all = [...(orders.data ?? [])].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   const counts = Object.fromEntries(
@@ -108,8 +115,10 @@ export default function MyOrdersPage() {
 
 function OrderCard({ order: o, now }: { order: Order; now: Date }) {
   const money = customerMoney(o);
-  const line =
-    o.status === "awaiting_payment" && o.paymentDeadline
+  const sim = useRiderSimulation(o.id, o.status, o.fulfillment, now);
+  const line = sim
+    ? RIDER_STAGES[sim.stage].hint
+    : o.status === "awaiting_payment" && o.paymentDeadline
       ? `ชำระก่อน ${formatTime(o.paymentDeadline)}`
       : o.status === "ready" && o.fulfillment === "pickup"
         ? o.handedOverAt
@@ -135,7 +144,12 @@ function OrderCard({ order: o, now }: { order: Order; now: Date }) {
             </span>
             <UnreadBadge count={o.unreadMessageCount} />
           </p>
-          <StatusBadge status={o.status} fulfillment={o.fulfillment} />
+          <CustomerStatusBadge
+            orderId={o.id}
+            status={o.status}
+            fulfillment={o.fulfillment}
+            now={now}
+          />
         </div>
         <p className="mt-1 text-sm text-ink-muted">
           {line} · {o.fulfillment === "pickup" ? "รับเอง" : "ส่งถึงที่"}

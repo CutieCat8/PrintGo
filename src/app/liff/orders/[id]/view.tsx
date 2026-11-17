@@ -12,7 +12,6 @@ import {
   Money,
   PageShell,
   SkeletonCard,
-  StatusBadge,
   SwappingDots,
   Timeline,
   buttonClasses,
@@ -20,9 +19,9 @@ import {
   useToast,
 } from "@/components/ui";
 import { ChatRoom } from "@/components/ui/ChatRoom";
+import { CustomerStatusBadge } from "../../_components/CustomerStatusBadge";
 import { RiderTracker } from "../../_components/RiderTracker";
 import { useRiderSimulation } from "../../_components/useRiderSimulation";
-import { RIDER_STAGES } from "@/lib/client/riderTracker";
 import { api, errorMessage, isApiClientError } from "@/lib/client/api";
 import {
   UNIT_LABEL,
@@ -78,10 +77,11 @@ function OrderBody({ order: o, refresh }: { order: OrderDetail; refresh: () => v
   return (
     <div className="-mt-3 flex flex-col gap-4">
       <div className="flex flex-wrap items-center gap-2 text-sm text-ink-muted">
-        <StatusBadge
+        <CustomerStatusBadge
+          orderId={o.id}
           status={o.status}
           fulfillment={o.fulfillment}
-          label={sim ? RIDER_STAGES[sim.stage].title : undefined}
+          now={now}
         />
         <span>สั่งเมื่อ {formatDayTime(o.createdAt, now)}</span>
       </div>
