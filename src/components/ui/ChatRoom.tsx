@@ -135,7 +135,7 @@ export function ChatRoom({
     <section
       ref={rootRef}
       className={cx(
-        "flex min-h-0 flex-col rounded-card bg-surface shadow-card ring-1 ring-line",
+        "flex min-h-0 flex-col rounded-card border border-line bg-surface shadow-card",
         className,
       )}
     >

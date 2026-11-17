@@ -97,6 +97,9 @@ function OrderView({
   const now = useNow();
   const [busy, setBusy] = useState(false);
   const [rejecting, setRejecting] = useState(false);
+  // While the shop still has to confirm the price the form needs the room: the chat floats as a
+  // circle. On every later step the chat sits in the page as a card.
+  const dock = !embedded && o.status === "submitted";
 
   /** Runs one state change; ORDER_INVALID_TRANSITION means someone else moved it first. */
   async function act(
@@ -183,9 +186,9 @@ function OrderView({
           "grid items-start gap-4",
           embedded
             ? "2xl:grid-cols-[1fr_minmax(320px,400px)]"
-            : o.status === "submitted" && "lg:grid-cols-[1fr_minmax(320px,420px)]",
+            : "lg:grid-cols-[1fr_minmax(320px,420px)]",
           // room for the floating chat so it never covers the last card
-          !embedded && "pb-24",
+          dock && "pb-24",
         )}
       >
         {/* Left (S4/S5): what to print and what to do next */}
@@ -207,7 +210,7 @@ function OrderView({
               }
             />
           )}
-          {embedded && (
+          {!dock && (
             <ChatRoom
               orderId={o.id}
               side="shop"
@@ -218,7 +221,7 @@ function OrderView({
         </div>
       </div>
 
-      {!embedded && (
+      {dock && (
         <ShopChatDock
           orderId={o.id}
           orderNo={o.orderNo}
