@@ -75,6 +75,12 @@
       transform: translateY(6px);
     }
   }
+  /* Rider tracker: the line to the next stage fills while the simulated stage runs */
+  @keyframes rider-fill {
+    to {
+      width: 100%;
+    }
+  }
   /* Watch Spinner (after the Amicro one): each arc turns once; durations are set per arc */
   @keyframes watch-spin {
     to {
