@@ -20,6 +20,10 @@ type ChatRoomProps = {
   closed: boolean;
   /** Shop quick replies: tapping one fills the box so it can be edited before sending. */
   quickReplies?: string[];
+  /** The caller draws its own heading (e.g. a floating panel header). */
+  hideTitle?: boolean;
+  /** Height classes of the message list; replaces the default `max-h-[60dvh] min-h-48`. */
+  listClassName?: string;
   className?: string;
 };
 
@@ -27,7 +31,15 @@ type ChatRoomProps = {
  * Chat between customer and shop for one order (Y5/Y6). Polls via useMessages, marks the room read
  * while it is actually on screen, and keeps failed messages with a retry button.
  */
-export function ChatRoom({ orderId, side, closed, quickReplies, className }: ChatRoomProps) {
+export function ChatRoom({
+  orderId,
+  side,
+  closed,
+  quickReplies,
+  hideTitle = false,
+  listClassName = "max-h-[60dvh] min-h-48",
+  className,
+}: ChatRoomProps) {
   const { mutate: mutateGlobal } = useSWRConfig();
   const [closedNow, setClosedNow] = useState(false);
   const isClosed = closed || closedNow;
@@ -127,13 +139,15 @@ export function ChatRoom({ orderId, side, closed, quickReplies, className }: Cha
         className,
       )}
     >
-      <h2 className="border-b border-line px-4 py-3 font-semibold text-ink">
-        {side === "customer" ? "คุยกับร้าน" : "คุยกับลูกค้า"}
-      </h2>
+      {!hideTitle && (
+        <h2 className="border-b border-line px-4 py-3 font-semibold text-ink">
+          {side === "customer" ? "คุยกับร้าน" : "คุยกับลูกค้า"}
+        </h2>
+      )}
 
       <div
         ref={listRef}
-        className="flex max-h-[60dvh] min-h-48 flex-1 flex-col gap-2 overflow-y-auto p-4"
+        className={cx("flex flex-1 flex-col gap-2 overflow-y-auto p-4", listClassName)}
         aria-live="polite"
       >
         {messages.isLoading ? (
@@ -189,7 +203,7 @@ export function ChatRoom({ orderId, side, closed, quickReplies, className }: Cha
       ) : (
         <div className="border-t border-line p-3">
           {quickReplies && quickReplies.length > 0 && (
-            <div className="mb-2 flex gap-2 overflow-x-auto pb-1">
+            <div className="mb-2 flex gap-2 overflow-x-auto pb-1 [scrollbar-color:var(--color-line-strong)_transparent] [scrollbar-width:thin]">
               {quickReplies.map((q) => (
                 <button
                   key={q}
@@ -234,7 +248,7 @@ export function ChatRoom({ orderId, side, closed, quickReplies, className }: Cha
 function Bubble({ message: m, mine }: { message: Message; mine: boolean }) {
   if (m.sender === "system") {
     return (
-      <p className="mx-auto max-w-[90%] rounded-full bg-canvas px-3 py-1 text-center text-xs text-ink-muted">
+      <p className="mx-auto max-w-[90%] rounded-full bg-brand-50 px-3 py-1 text-center text-xs text-ink-muted">
         {m.body}
       </p>
     );
@@ -244,7 +258,9 @@ function Bubble({ message: m, mine }: { message: Message; mine: boolean }) {
       <p
         className={cx(
           "max-w-[80%] rounded-2xl px-3 py-2 break-words whitespace-pre-wrap",
-          mine ? "rounded-br-sm bg-brand text-white" : "rounded-bl-sm bg-canvas text-ink",
+          mine
+            ? "rounded-br-sm bg-brand text-white"
+            : "rounded-bl-sm bg-brand-50 text-ink ring-1 ring-line",
         )}
       >
         {m.body}

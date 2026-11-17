@@ -18,6 +18,7 @@ import {
   useToast,
 } from "@/components/ui";
 import { ChatRoom } from "@/components/ui/ChatRoom";
+import { ShopChatDock } from "../../_components/ShopChatDock";
 import { api, errorMessage, isApiClientError } from "@/lib/client/api";
 import {
   UNIT_LABEL,
@@ -182,7 +183,9 @@ function OrderView({
           "grid items-start gap-4",
           embedded
             ? "2xl:grid-cols-[1fr_minmax(320px,400px)]"
-            : "lg:grid-cols-[1fr_minmax(320px,420px)]",
+            : o.status === "submitted" && "lg:grid-cols-[1fr_minmax(320px,420px)]",
+          // room for the floating chat so it never covers the last card
+          !embedded && "pb-24",
         )}
       >
         {/* Left (S4/S5): what to print and what to do next */}
@@ -204,14 +207,25 @@ function OrderView({
               }
             />
           )}
-          <ChatRoom
-            orderId={o.id}
-            side="shop"
-            closed={isTerminal(o.status)}
-            quickReplies={QUICK_REPLIES}
-          />
+          {embedded && (
+            <ChatRoom
+              orderId={o.id}
+              side="shop"
+              closed={isTerminal(o.status)}
+              quickReplies={QUICK_REPLIES}
+            />
+          )}
         </div>
       </div>
+
+      {!embedded && (
+        <ShopChatDock
+          orderId={o.id}
+          orderNo={o.orderNo}
+          closed={isTerminal(o.status)}
+          quickReplies={QUICK_REPLIES}
+        />
+      )}
 
       <RejectModal
         open={rejecting}
