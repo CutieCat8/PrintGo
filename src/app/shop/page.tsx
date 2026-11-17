@@ -16,6 +16,7 @@ import {
 import { errorMessage } from "@/lib/client/api";
 import { etaText, formatCountdown, formatTime } from "@/lib/client/format";
 import { useNow, useShopMe, useShopOrders } from "@/lib/client/hooks";
+import { groupDoneOrders } from "@/lib/client/shopDone";
 import type { Order, OrderStatus } from "@/lib/db/types";
 import { EarningsCard } from "./_components/EarningsCard";
 
@@ -73,10 +74,8 @@ export default function ShopQueuePage() {
   }
 
   const list = orders.data ?? [];
-  const done = list
-    .filter((o) => DONE.includes(o.status) || isHandedOffToDelivery(o.status, o.fulfillment))
-    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
-    .slice(0, 30);
+  const doneGroups = groupDoneOrders(list);
+  const doneTotal = doneGroups.reduce((sum, g) => sum + g.count, 0);
 
   return (
     <div className="flex flex-col gap-6">
@@ -132,14 +131,31 @@ export default function ShopQueuePage() {
           className="flex items-center gap-2 font-semibold text-ink-muted hover:text-ink"
         >
           <Icon name="down" className={cx("size-5 transition", showDone && "rotate-180")} />
-          จบแล้ว ({done.length})
+          จบแล้ว ({doneTotal})
         </button>
         {showDone && (
-          <ul className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-            {done.map((o) => (
-              <QueueCard key={o.id} order={o} now={now} />
+          <div className="mt-3 flex flex-col gap-5">
+            {doneGroups.length === 0 && (
+              <p className="text-sm text-ink-subtle">ยังไม่มีออเดอร์ที่จบ</p>
+            )}
+            {doneGroups.map((g) => (
+              <section key={g.key} aria-labelledby={`done-${g.key}`}>
+                <h3 id={`done-${g.key}`} className="mb-2 font-semibold text-ink">
+                  {g.title} <span className="tabular-nums text-ink-muted">({g.count})</span>
+                  {g.count > g.items.length && (
+                    <span className="ml-2 text-sm font-normal text-ink-subtle">
+                      แสดง {g.items.length} รายการล่าสุด
+                    </span>
+                  )}
+                </h3>
+                <ul className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                  {g.items.map((o) => (
+                    <QueueCard key={o.id} order={o} now={now} />
+                  ))}
+                </ul>
+              </section>
             ))}
-          </ul>
+          </div>
         )}
       </section>
     </div>
