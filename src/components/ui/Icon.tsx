@@ -114,6 +114,12 @@ const PATHS = {
       <circle cx="12" cy="12" r="3" />
     </>
   ),
+  user: (
+    <>
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4.5 20.5c.6-3.8 3.7-6 7.5-6s6.9 2.2 7.5 6" />
+    </>
+  ),
   download: (
     <>
       <path d="M12 4v12M7 11l5 5 5-5" />
