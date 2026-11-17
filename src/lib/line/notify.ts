@@ -3,7 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { getServiceClient } from "@/lib/db/server";
 import { CustomerRow, OrderRow, OrderServiceRow, ShopRow, parseRow } from "@/lib/db/types";
 import { pushMessages } from "./client";
-import { buildNotifyMessage, type NotifyData } from "./flex/builders";
+import { buildNotifyMessages, type NotifyData } from "./flex/builders";
 
 /**
  * Tells the order's customer in LINE that something changed (Z6, CONTRACTS 7).
@@ -108,6 +108,9 @@ async function loadData(
       order,
       shopName: shop.name,
       shopAddress: shop.address,
+      shopLat: shop.lat,
+      shopLng: shop.lng,
+      customerName: customer.displayName,
       services,
       paymentRejectReason,
       trackingUrl,
@@ -131,5 +134,8 @@ export async function notify(orderId: string, event: NotifyEvent): Promise<void>
     console.warn(`[notify] order ${orderId} or its customer/shop not found: skipped ${event}`);
     return;
   }
-  await pushMessages(loaded.lineUserId, [buildNotifyMessage(event, loaded.data)]);
+  const messages = buildNotifyMessages(event, loaded.data);
+  // Some events send nothing on purpose (printing, courier_requested): keep the chat short
+  if (messages.length === 0) return;
+  await pushMessages(loaded.lineUserId, messages);
 }

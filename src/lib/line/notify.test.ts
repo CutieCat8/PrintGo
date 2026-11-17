@@ -97,7 +97,13 @@ describe("notify", () => {
     const [to, messages] = pushMessages.mock.calls[0];
     expect(to).toBe("Uabc");
     expect(messages).toHaveLength(1);
-    expect(JSON.stringify(messages)).toContain("23.00 บาท");
+    expect(JSON.stringify(messages)).toContain("฿23.00");
+  });
+
+  it("sends nothing for printing and courier_requested (shorter chat per order)", async () => {
+    await notify(ORDER_ID, "printing");
+    await notify(ORDER_ID, "courier_requested");
+    expect(pushMessages).not.toHaveBeenCalled();
   });
 
   it("chat_message uses the shop's latest message", async () => {
@@ -114,15 +120,15 @@ describe("notify", () => {
 
   it("throws when LINE refuses, so callers can log it and chat keeps push_sent_at unset", async () => {
     pushMessages.mockRejectedValue(new Error("LINE API answered 429"));
-    await expect(notify(ORDER_ID, "printing")).rejects.toThrow("429");
+    await expect(notify(ORDER_ID, "ready")).rejects.toThrow("429");
   });
 
   it("skips quietly without LINE settings or when the order is gone", async () => {
     vi.stubEnv("LINE_CHANNEL_ACCESS_TOKEN", "");
-    await expect(notify(ORDER_ID, "printing")).resolves.toBeUndefined();
+    await expect(notify(ORDER_ID, "ready")).resolves.toBeUndefined();
     vi.stubEnv("LINE_CHANNEL_ACCESS_TOKEN", "token");
     tables.orders = [];
-    await expect(notify(ORDER_ID, "printing")).resolves.toBeUndefined();
+    await expect(notify(ORDER_ID, "ready")).resolves.toBeUndefined();
     expect(pushMessages).not.toHaveBeenCalled();
   });
 });
