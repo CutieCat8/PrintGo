@@ -300,3 +300,35 @@ describe("describeOrderProblem", () => {
     ).toEqual({ message: "ระบบขัดข้อง", pickAnotherShop: false, fileIndex: null });
   });
 });
+
+describe("orderSteps with the rider simulation", () => {
+  const delivery = {
+    status: "courier_requested" as const,
+    fulfillment: "delivery" as const,
+    paymentDeadline: "x",
+    payment: null,
+  };
+
+  it("replaces the courier steps with the four rider stages, following the simulated stage", () => {
+    for (const stage of [0, 1, 2] as const) {
+      const steps = orderSteps(delivery, stage);
+      expect(steps).toHaveLength(9);
+      expect(steps.slice(0, 5).every((s) => s.state === "done")).toBe(true);
+      const rider = steps.slice(5);
+      expect(rider.filter((s) => s.state === "current")).toHaveLength(1);
+      expect(rider.findIndex((s) => s.state === "current")).toBe(stage);
+      expect(rider.find((s) => s.state === "current")?.busy).toBe(true);
+    }
+  });
+
+  it("at the last stage everything is done and nothing spins", () => {
+    const steps = orderSteps(delivery, 3);
+    expect(steps.every((s) => s.state === "done" && !s.busy)).toBe(true);
+    expect(steps.at(-1)?.title).toBe("ส่งถึงแล้ว");
+  });
+
+  it("is ignored for pickup orders and when no stage is given", () => {
+    expect(orderSteps({ ...delivery, fulfillment: "pickup", status: "ready" }, 2)).toHaveLength(6);
+    expect(orderSteps(delivery)).toHaveLength(8);
+  });
+});

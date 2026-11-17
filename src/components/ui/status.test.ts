@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { ENUMS } from "@/lib/db/enums";
-import { ORDER_STATUS_INFO, TONE_CLASSES, orderStatusLabel } from "./status";
+import {
+  ORDER_STATUS_INFO,
+  TONE_CLASSES,
+  isHandedOffToDelivery,
+  orderStatusLabel,
+} from "./status";
 
 describe("order status labels", () => {
   it("covers exactly the 11 statuses from CONTRACTS", () => {
@@ -32,5 +37,25 @@ describe("order status labels", () => {
     for (const { tone } of Object.values(ORDER_STATUS_INFO)) {
       expect(TONE_CLASSES[tone]).toBeTruthy();
     }
+  });
+});
+
+describe("shop view of delivery orders", () => {
+  it("a delivery order from ready on is out of the shop's hands", () => {
+    for (const status of ["ready", "courier_requested", "in_transit"] as const) {
+      expect(isHandedOffToDelivery(status, "delivery")).toBe(true);
+      expect(orderStatusLabel(status, "delivery", "shop")).toBe("ปริ้นเสร็จแล้ว");
+    }
+  });
+
+  it("pickup orders and earlier steps are unchanged for the shop", () => {
+    expect(isHandedOffToDelivery("ready", "pickup")).toBe(false);
+    expect(orderStatusLabel("ready", "pickup", "shop")).toBe("พร้อมรับ");
+    expect(isHandedOffToDelivery("printing", "delivery")).toBe(false);
+    expect(orderStatusLabel("printing", "delivery", "shop")).toBe("กำลังปริ้น");
+  });
+
+  it("the customer still sees the real labels", () => {
+    expect(orderStatusLabel("courier_requested", "delivery")).toBe("กำลังหาไรเดอร์");
   });
 });

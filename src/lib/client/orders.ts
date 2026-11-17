@@ -1,4 +1,5 @@
 import type { Order, OrderDetail, OrderStatus } from "@/lib/db/types";
+import { RIDER_STAGES, type RiderStage } from "./riderTracker";
 
 /** Pure helpers for order screens (tested in orders.test.ts). */
 
@@ -40,8 +41,30 @@ export function orderSteps(
   o: Pick<OrderDetail, "status" | "fulfillment" | "paymentDeadline"> & {
     payment: Pick<NonNullable<OrderDetail["payment"]>, "status"> | null;
   },
+  /** Screen-only rider simulation (delivery, out for delivery): replaces the last steps. */
+  riderStage?: RiderStage,
 ): Step[] {
   const flow = o.fulfillment === "delivery" ? DELIVERY_STEPS : PICKUP_STEPS;
+
+  if (riderStage !== undefined && o.fulfillment === "delivery") {
+    const printed = flow.slice(
+      0,
+      flow.findIndex(([s]) => s === "courier_requested"),
+    );
+    return [
+      ...printed.map(([key, title]): Step => ({ key, title, state: "done" })),
+      ...RIDER_STAGES.map((r, i): Step => {
+        const title = i === 0 ? "กำลังหาไรเดอร์" : i === 3 ? "ส่งถึงแล้ว" : r.title;
+        return {
+          key: r.key,
+          title,
+          state:
+            riderStage === 3 || i < riderStage ? "done" : i === riderStage ? "current" : "upcoming",
+          busy: i === riderStage && riderStage < 3,
+        };
+      }),
+    ];
+  }
   const stopTitle = STOPPED[o.status];
 
   if (stopTitle) {

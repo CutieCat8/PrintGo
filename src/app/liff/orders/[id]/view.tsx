@@ -21,6 +21,8 @@ import {
 } from "@/components/ui";
 import { ChatRoom } from "@/components/ui/ChatRoom";
 import { RiderTracker } from "../../_components/RiderTracker";
+import { useRiderSimulation } from "../../_components/useRiderSimulation";
+import { RIDER_STAGES } from "@/lib/client/riderTracker";
 import { api, errorMessage, isApiClientError } from "@/lib/client/api";
 import {
   UNIT_LABEL,
@@ -71,20 +73,25 @@ export function CustomerOrderPage() {
 function OrderBody({ order: o, refresh }: { order: OrderDetail; refresh: () => void }) {
   const now = useNow();
   const money = customerMoney(o);
+  const sim = useRiderSimulation(o.id, o.status, o.fulfillment, now);
 
   return (
     <div className="-mt-3 flex flex-col gap-4">
       <div className="flex flex-wrap items-center gap-2 text-sm text-ink-muted">
-        <StatusBadge status={o.status} fulfillment={o.fulfillment} />
+        <StatusBadge
+          status={o.status}
+          fulfillment={o.fulfillment}
+          label={sim ? RIDER_STAGES[sim.stage].title : undefined}
+        />
         <span>สั่งเมื่อ {formatDayTime(o.createdAt, now)}</span>
       </div>
 
-      <StatusHero order={o} now={now} refresh={refresh} />
+      <StatusHero order={o} now={now} sim={sim} refresh={refresh} />
 
       {!isTerminal(o.status) && o.status !== "submitted" && (
         <Card>
           <h2 className="mb-3 font-display text-lg font-bold italic">ความคืบหน้า</h2>
-          <Timeline steps={orderSteps(o)} />
+          <Timeline steps={orderSteps(o, sim?.stage)} />
         </Card>
       )}
 
@@ -181,10 +188,13 @@ function goChat() {
 function StatusHero({
   order: o,
   now,
+  sim,
   refresh,
 }: {
   order: OrderDetail;
   now: Date;
+  /** Screen-only rider simulation (delivery orders out for delivery), else null. */
+  sim: ReturnType<typeof useRiderSimulation>;
   refresh: () => void;
 }) {
   const toast = useToast();
@@ -398,9 +408,8 @@ function StatusHero({
         <Hero tone="done" label="เสร็จสิ้น" value="ขอบคุณที่ใช้ PrintGo" />
       ) : o.status === "ready" && o.fulfillment === "pickup" ? (
         <Hero tone="go" label="พร้อมรับที่ร้านแล้ว" value={o.shop.name} />
-      ) : o.fulfillment === "delivery" &&
-        (o.status === "courier_requested" || o.status === "in_transit") ? (
-        <RiderTracker orderId={o.id} status={o.status} now={now} />
+      ) : sim ? (
+        <RiderTracker simulation={sim} now={now} />
       ) : o.status === "courier_requested" || o.status === "in_transit" || o.status === "ready" ? (
         <Hero
           tone="go"

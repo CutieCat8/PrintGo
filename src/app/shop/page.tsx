@@ -11,6 +11,7 @@ import {
   Skeleton,
   StatusBadge,
   cx,
+  isHandedOffToDelivery,
 } from "@/components/ui";
 import { errorMessage } from "@/lib/client/api";
 import { etaText, formatCountdown, formatTime } from "@/lib/client/format";
@@ -23,11 +24,8 @@ const COLUMNS: { key: string; title: string; statuses: OrderStatus[]; hot?: bool
   { key: "pay", title: "รอลูกค้าจ่าย", statuses: ["awaiting_payment"] },
   { key: "todo", title: "ต้องปริ้น", statuses: ["paid"] },
   { key: "printing", title: "กำลังปริ้น", statuses: ["printing"] },
-  {
-    key: "handover",
-    title: "พร้อมรับ/ส่ง",
-    statuses: ["ready", "courier_requested", "in_transit"],
-  },
+  // Delivery orders leave the queue once printed: the print shop's job ends there
+  { key: "handover", title: "พร้อมรับที่ร้าน", statuses: ["ready"] },
 ];
 const DONE: OrderStatus[] = ["completed", "rejected", "cancelled", "expired"];
 
@@ -76,7 +74,7 @@ export default function ShopQueuePage() {
 
   const list = orders.data ?? [];
   const done = list
-    .filter((o) => DONE.includes(o.status))
+    .filter((o) => DONE.includes(o.status) || isHandedOffToDelivery(o.status, o.fulfillment))
     .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
     .slice(0, 30);
 
@@ -86,7 +84,13 @@ export default function ShopQueuePage() {
       <div className="-mx-4 overflow-x-auto px-4 pb-2 lg:mx-0 lg:px-0">
         <div className="grid min-w-[1050px] grid-cols-5 gap-3">
           {COLUMNS.map((col) => {
-            const items = sortColumn(list.filter((o) => col.statuses.includes(o.status)));
+            const items = sortColumn(
+              list.filter(
+                (o) =>
+                  col.statuses.includes(o.status) &&
+                  !isHandedOffToDelivery(o.status, o.fulfillment),
+              ),
+            );
             return (
               <section
                 key={col.key}
@@ -168,7 +172,7 @@ function QueueCard({ order: o, now }: { order: Order; now: Date }) {
     line = { text: (overdue ? "เลยเวลา · " : "") + (eta ?? ""), tone: overdue ? "late" : "plain" };
   } else if (o.status === "ready") {
     line = {
-      text: o.fulfillment === "pickup" ? "รอลูกค้ามารับ" : "รอไรเดอร์",
+      text: "รอลูกค้ามารับ",
       tone: "plain",
     };
   }
@@ -189,8 +193,13 @@ function QueueCard({ order: o, now }: { order: Order; now: Date }) {
             {o.fulfillment === "pickup" ? "รับเอง" : "ส่งถึงที่"}
           </span>
         </div>
-        {DONE.includes(o.status) && (
-          <StatusBadge status={o.status} fulfillment={o.fulfillment} className="mt-1" />
+        {(DONE.includes(o.status) || isHandedOffToDelivery(o.status, o.fulfillment)) && (
+          <StatusBadge
+            status={o.status}
+            fulfillment={o.fulfillment}
+            audience="shop"
+            className="mt-1"
+          />
         )}
         <p
           className={cx(

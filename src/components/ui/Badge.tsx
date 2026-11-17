@@ -1,7 +1,13 @@
 import type { ReactNode } from "react";
 import type { Fulfillment, OrderStatus } from "@/lib/db/enums";
 import { cx } from "./cx";
-import { ORDER_STATUS_INFO, TONE_CLASSES, orderStatusLabel, type StatusTone } from "./status";
+import {
+  ORDER_STATUS_INFO,
+  TONE_CLASSES,
+  isHandedOffToDelivery,
+  orderStatusLabel,
+  type StatusTone,
+} from "./status";
 
 export function Badge({
   tone = "gray",
@@ -29,16 +35,23 @@ export function Badge({
 export function StatusBadge({
   status,
   fulfillment,
+  audience,
+  label,
   className,
 }: {
   status: OrderStatus;
   fulfillment?: Fulfillment;
+  /** "shop": a delivery order after printing reads "ปริ้นเสร็จแล้ว" (the shop's job is done). */
+  audience?: "shop";
+  /** Replaces the text (e.g. the simulated rider stage on the customer's screen). */
+  label?: string;
   className?: string;
 }) {
+  const handedOff = audience === "shop" && isHandedOffToDelivery(status, fulfillment);
   return (
-    <Badge tone={ORDER_STATUS_INFO[status].tone} className={className}>
+    <Badge tone={handedOff ? "teal" : ORDER_STATUS_INFO[status].tone} className={className}>
       <span aria-hidden="true" className="size-1.5 rounded-full bg-current" />
-      {orderStatusLabel(status, fulfillment)}
+      {label ?? orderStatusLabel(status, fulfillment, audience)}
     </Badge>
   );
 }

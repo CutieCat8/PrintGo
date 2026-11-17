@@ -12,6 +12,7 @@ import {
   Money,
   SkeletonCard,
   StatusBadge,
+  isHandedOffToDelivery,
   Textarea,
   Icon,
   cx,
@@ -147,7 +148,7 @@ function OrderView({
             <h1 className="font-display text-[1.9rem] leading-tight font-bold tracking-tight italic">
               {o.orderNo}
             </h1>
-            <StatusBadge status={o.status} fulfillment={o.fulfillment} />
+            <StatusBadge status={o.status} fulfillment={o.fulfillment} audience="shop" />
             {o.status === "submitted" && responseLeft !== null && (
               <span
                 className={cx(
@@ -332,7 +333,9 @@ function NextStep({
             onClick={() =>
               act(
                 () => api.markReady(o.id),
-                o.fulfillment === "pickup" ? "แจ้งลูกค้าให้มารับแล้ว" : "พร้อมส่ง รอเรียกไรเดอร์",
+                o.fulfillment === "pickup"
+                  ? "แจ้งลูกค้าให้มารับแล้ว"
+                  : "ปริ้นเสร็จแล้ว งานของร้านเสร็จเรียบร้อย",
               )
             }
           >
@@ -394,14 +397,11 @@ function NextStep({
     );
   }
 
-  if (o.status === "ready" || o.status === "courier_requested" || o.status === "in_transit") {
+  if (isHandedOffToDelivery(o.status, o.fulfillment)) {
     return (
       <Card>
-        <p className="font-semibold text-brand">
-          {o.status === "in_transit" ? "ไรเดอร์กำลังนำส่ง" : "รอไรเดอร์มารับงาน"}
-        </p>
-        <p className="text-sm text-ink-muted">ร้านไม่ต้องทำอะไรเพิ่ม ระบบจะแจ้งเมื่อจัดส่งเสร็จ</p>
-        {o.delivery?.note && <p className="mt-1 text-sm">{o.delivery.note}</p>}
+        <p className="font-semibold text-brand">ปริ้นเสร็จแล้ว</p>
+        <p className="text-sm text-ink-muted">งานของร้านเสร็จเรียบร้อย ร้านไม่ต้องทำอะไรเพิ่ม</p>
       </Card>
     );
   }
