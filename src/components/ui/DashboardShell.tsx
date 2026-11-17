@@ -56,7 +56,8 @@ export function DashboardShell({
           <Link href="/shop" className="flex min-w-0 items-center gap-2.5">
             <LogoMark className="size-8 shrink-0" />
             <span className="min-w-0 truncate font-display text-lg font-bold">
-              PrintGo <span className="text-ink-subtle">·</span> {shopName}
+              Print<span className="text-forest">Go</span>{" "}
+              <span className="text-ink-subtle">·</span> {shopName}
             </span>
           </Link>
           <nav
