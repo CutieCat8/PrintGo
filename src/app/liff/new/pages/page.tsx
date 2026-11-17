@@ -1,9 +1,11 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { Button, Icon, Input, PageShell, Segmented, Skeleton, cx } from "@/components/ui";
 import { updateFile, type DraftFile } from "@/lib/client/draft";
+import { closePdf, drawPdfPage } from "@/lib/client/pagePreview";
+import { pickedFiles } from "@/lib/client/pickedFiles";
 import { formatRanges, parsePageRange } from "@/lib/pages";
 import { FlowFooter, useFlowGuard } from "../../_components/OrderFlow";
 
@@ -79,6 +81,8 @@ function Picker({ file, total }: { file: DraftFile; total: number }) {
     else set.add(page);
     choose(set);
   }
+
+  useEffect(() => () => closePdf(file.key), [file.key]);
 
   const all = Array.from({ length: total }, (_, i) => i + 1);
 
@@ -164,13 +168,11 @@ function Picker({ file, total }: { file: DraftFile; total: number }) {
                       >
                         <span
                           className={cx(
-                            "flex aspect-[3/4] w-full flex-col gap-1.5 rounded-lg bg-surface p-3 transition",
+                            "relative flex aspect-[3/4] w-full flex-col gap-1.5 overflow-hidden rounded-lg bg-white transition",
                             on ? "ring-2 ring-ink" : "ring-1 ring-line",
                           )}
                         >
-                          {[0, 1, 2, 3, 4].map((i) => (
-                            <span key={i} className="h-1 rounded bg-line-strong/60" />
-                          ))}
+                          <PageThumb file={file} page={p} grayscale={file.color === "bw"} />
                         </span>
                         <span
                           className={cx(
@@ -214,5 +216,91 @@ function QuickButton({ onPress, children }: { onPress: () => void; children: Rea
     >
       {children}
     </button>
+  );
+}
+
+/**
+ * Real content of one page, drawn only when the tile scrolls into view. Black-and-white files are
+ * shown in grayscale. Falls back to blank lines when the file is not in memory (e.g. after a reload).
+ */
+function PageThumb({
+  file,
+  page,
+  grayscale,
+}: {
+  file: DraftFile;
+  page: number;
+  grayscale: boolean;
+}) {
+  const box = useRef<HTMLSpanElement>(null);
+  const canvas = useRef<HTMLCanvasElement>(null);
+  const [visible, setVisible] = useState(false);
+  const [state, setState] = useState<"idle" | "ready" | "failed">("idle");
+  const [url, setUrl] = useState<string | null>(null);
+  const source = pickedFiles.get(file.key);
+
+  useEffect(() => {
+    const el = box.current;
+    if (!el || !source) return;
+    let objectUrl: string | null = null;
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry?.isIntersecting) return;
+        io.disconnect();
+        if (source.type !== "application/pdf") {
+          objectUrl = URL.createObjectURL(source);
+          setUrl(objectUrl);
+        }
+        setVisible(true);
+      },
+      { rootMargin: "200px" },
+    );
+    io.observe(el);
+    return () => {
+      io.disconnect();
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [source]);
+
+  useEffect(() => {
+    if (!visible || !source || source.type !== "application/pdf") return;
+    let cancelled = false;
+    const c = canvas.current;
+    if (!c) return;
+    void drawPdfPage(file.key, source, page, c, box.current?.clientWidth || 120).then((ok) => {
+      if (!cancelled) setState(ok ? "ready" : "failed");
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [visible, source, file.key, page]);
+
+  const hasPicture = url !== null || state === "ready";
+
+  return (
+    <span ref={box} className="absolute inset-0 flex flex-col gap-1.5 p-3">
+      {!hasPicture &&
+        [0, 1, 2, 3, 4].map((i) => <span key={i} className="h-1 rounded bg-line-strong/60" />)}
+      {source?.type === "application/pdf" ? (
+        <canvas
+          ref={canvas}
+          aria-hidden="true"
+          className={cx(
+            "absolute inset-0 size-full object-contain",
+            state !== "ready" && "invisible",
+            grayscale && "grayscale",
+          )}
+        />
+      ) : (
+        url && (
+          // eslint-disable-next-line @next/next/no-img-element -- local object URL
+          <img
+            src={url}
+            alt=""
+            className={cx("absolute inset-0 size-full object-contain", grayscale && "grayscale")}
+          />
+        )
+      )}
+    </span>
   );
 }
