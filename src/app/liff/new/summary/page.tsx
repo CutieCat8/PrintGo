@@ -43,6 +43,8 @@ export default function SummaryPage() {
   const chosen = useChosenShop(draft.shopId);
   const { shop, pos, mutate: refreshShops } = chosen;
   const [sending, setSending] = useState(false);
+  // The order is created: the draft is cleared, so do not show "shop not found" while the order page opens
+  const [sent, setSent] = useState(false);
   const sentRef = useRef(false);
 
   const delivery = draft.fulfillment === "delivery" && Boolean(shop?.acceptsDelivery && pos);
@@ -92,6 +94,7 @@ export default function SummaryPage() {
     setSending(true);
     try {
       const order = await api.createOrder(toCreateOrderRequest(effective, shop.id, pos));
+      setSent(true);
       markOrderSent(); // the guard must not send us back to step 1 once the draft is cleared
       clearDraft();
       router.replace(`/liff/orders/${order.id}`);
@@ -126,83 +129,90 @@ export default function SummaryPage() {
         </Button>
       }
     >
-      <ChosenShopGate hydrated={hydrated} chosen={chosen}>
-        {(shop) => (
-          <div className="flex flex-col gap-4">
-            <div className="flex items-center gap-3 rounded-card bg-race p-4 text-white">
-              <span className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-white/15">
-                <Icon name="store" className="size-6" />
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="truncate font-display text-lg font-bold italic">{shop.name}</p>
-                <p className="flex items-center gap-1 text-sm text-white/75">
-                  <Icon name={delivery ? "truck" : "store"} className="size-4" />
-                  {delivery ? "ส่งถึงที่ · ค่าส่งประมาณ" : "รับเองที่ร้าน"}
-                </p>
+      {sent ? (
+        <p role="status" className="py-16 text-center text-ink-muted">
+          ส่งออเดอร์แล้ว กำลังเปิดหน้าออเดอร์…
+        </p>
+      ) : (
+        <ChosenShopGate hydrated={hydrated} chosen={chosen}>
+          {(shop) => (
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center gap-3 rounded-card bg-race p-4 text-white">
+                <span className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-white/15">
+                  <Icon name="store" className="size-6" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-display text-lg font-bold italic">{shop.name}</p>
+                  <p className="flex items-center gap-1 text-sm text-white/75">
+                    <Icon name={delivery ? "truck" : "store"} className="size-4" />
+                    {delivery ? "ส่งถึงที่ · ค่าส่งประมาณ" : "รับเองที่ร้าน"}
+                  </p>
+                </div>
+                <Link
+                  href="/liff/new/shop"
+                  className="rounded-full px-3 py-1.5 text-sm font-semibold text-white ring-1 ring-white/40 hover:bg-white/10"
+                >
+                  เปลี่ยน
+                </Link>
               </div>
-              <Link
-                href="/liff/new/shop"
-                className="rounded-full px-3 py-1.5 text-sm font-semibold text-white ring-1 ring-white/40 hover:bg-white/10"
-              >
-                เปลี่ยน
-              </Link>
+
+              <section>
+                <h2 className="mb-2 font-display text-lg font-bold italic">ไฟล์ที่พิมพ์</h2>
+                <ul className="divide-y divide-line rounded-card bg-surface ring-1 ring-line">
+                  {draft.files.map((f) => (
+                    <li key={f.key} className="flex items-start gap-3 px-4 py-3">
+                      <Icon name="file" className="mt-0.5 size-5 shrink-0 text-ink-muted" />
+                      <div className="min-w-0">
+                        <p className="truncate font-medium">{f.name}</p>
+                        <p className="text-sm text-ink-muted">
+                          {f.paper} · {COLOR_LABEL[f.color]} · {SIDES_LABEL[f.sides]} ·{" "}
+                          {f.pageRange
+                            ? `หน้า ${f.pageRange.replace(/,/g, ", ")} (${selectedPageCount(f.pageRange, f.pageCount ?? 0)} จาก ${f.pageCount} หน้า)`
+                            : `${f.pageCount} หน้า`}{" "}
+                          × {f.copies} ชุด
+                        </p>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+                {services.length > 0 && (
+                  <p className="mt-2 text-sm text-ink-muted">
+                    บริการเสริม: {services.map((s) => s.name).join(", ")}
+                  </p>
+                )}
+                {delivery && (
+                  <p className="mt-2 text-sm text-ink-muted">
+                    ส่งที่: {draft.delivery.address} · {draft.delivery.name} {draft.delivery.phone}
+                  </p>
+                )}
+              </section>
+
+              <EstimateCard
+                loading={estimate.isLoading}
+                problem={estimate.error ? problemOf(estimate.error) : null}
+                data={estimate.data}
+                onRetry={() => estimate.mutate()}
+                onPickAnotherShop={pickAnotherShop}
+              />
+
+              <p className="flex gap-2 rounded-card bg-surface px-4 py-3 text-sm text-ink-muted ring-1 ring-line">
+                <Icon name="clock" className="mt-0.5 size-4 shrink-0" />
+                ร้านจะยืนยันราคาและเวลาเสร็จภายใน 15 นาที ยังไม่ต้องจ่ายตอนนี้ ·
+                ร้านดาวน์โหลดไฟล์ได้
+              </p>
+
+              <Textarea
+                label="หมายเหตุถึงร้าน (ไม่บังคับ)"
+                rows={2}
+                maxLength={500}
+                placeholder="เช่น ขอแม็กซ์สีปก…"
+                value={draft.note}
+                onChange={(e) => updateDraft((d) => ({ ...d, note: e.target.value }))}
+              />
             </div>
-
-            <section>
-              <h2 className="mb-2 font-display text-lg font-bold italic">ไฟล์ที่พิมพ์</h2>
-              <ul className="divide-y divide-line rounded-card bg-surface ring-1 ring-line">
-                {draft.files.map((f) => (
-                  <li key={f.key} className="flex items-start gap-3 px-4 py-3">
-                    <Icon name="file" className="mt-0.5 size-5 shrink-0 text-ink-muted" />
-                    <div className="min-w-0">
-                      <p className="truncate font-medium">{f.name}</p>
-                      <p className="text-sm text-ink-muted">
-                        {f.paper} · {COLOR_LABEL[f.color]} · {SIDES_LABEL[f.sides]} ·{" "}
-                        {f.pageRange
-                          ? `หน้า ${f.pageRange.replace(/,/g, ", ")} (${selectedPageCount(f.pageRange, f.pageCount ?? 0)} จาก ${f.pageCount} หน้า)`
-                          : `${f.pageCount} หน้า`}{" "}
-                        × {f.copies} ชุด
-                      </p>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-              {services.length > 0 && (
-                <p className="mt-2 text-sm text-ink-muted">
-                  บริการเสริม: {services.map((s) => s.name).join(", ")}
-                </p>
-              )}
-              {delivery && (
-                <p className="mt-2 text-sm text-ink-muted">
-                  ส่งที่: {draft.delivery.address} · {draft.delivery.name} {draft.delivery.phone}
-                </p>
-              )}
-            </section>
-
-            <EstimateCard
-              loading={estimate.isLoading}
-              problem={estimate.error ? problemOf(estimate.error) : null}
-              data={estimate.data}
-              onRetry={() => estimate.mutate()}
-              onPickAnotherShop={pickAnotherShop}
-            />
-
-            <p className="flex gap-2 rounded-card bg-surface px-4 py-3 text-sm text-ink-muted ring-1 ring-line">
-              <Icon name="clock" className="mt-0.5 size-4 shrink-0" />
-              ร้านจะยืนยันราคาและเวลาเสร็จภายใน 15 นาที ยังไม่ต้องจ่ายตอนนี้ · ร้านดาวน์โหลดไฟล์ได้
-            </p>
-
-            <Textarea
-              label="หมายเหตุถึงร้าน (ไม่บังคับ)"
-              rows={2}
-              maxLength={500}
-              placeholder="เช่น ขอแม็กซ์สีปก…"
-              value={draft.note}
-              onChange={(e) => updateDraft((d) => ({ ...d, note: e.target.value }))}
-            />
-          </div>
-        )}
-      </ChosenShopGate>
+          )}
+        </ChosenShopGate>
+      )}
     </PageShell>
   );
 }
