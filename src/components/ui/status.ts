@@ -21,7 +21,20 @@ export const ORDER_STATUS_INFO: Record<OrderStatus, StatusInfo> = {
 };
 
 /** Thai label for a status. `ready` gets a precise label when the fulfillment is known. */
-export function orderStatusLabel(status: OrderStatus, fulfillment?: Fulfillment): string {
+/** Delivery orders from "ready" on are out of the shop's hands: the print shop's job ends when printing is done. */
+export function isHandedOffToDelivery(status: OrderStatus, fulfillment?: Fulfillment): boolean {
+  return (
+    fulfillment === "delivery" &&
+    (status === "ready" || status === "courier_requested" || status === "in_transit")
+  );
+}
+
+export function orderStatusLabel(
+  status: OrderStatus,
+  fulfillment?: Fulfillment,
+  audience?: "shop",
+): string {
+  if (audience === "shop" && isHandedOffToDelivery(status, fulfillment)) return "ปริ้นเสร็จแล้ว";
   if (status === "ready" && fulfillment === "pickup") return "พร้อมรับ";
   if (status === "ready" && fulfillment === "delivery") return "พร้อมส่ง";
   return ORDER_STATUS_INFO[status].label;

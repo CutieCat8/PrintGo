@@ -1,46 +1,27 @@
 "use client";
 
-import { useState } from "react";
 import { Icon, cx, type IconName } from "@/components/ui";
 import { formatTime } from "@/lib/client/format";
 import {
   RIDER_STAGES,
   STAGE_SECONDS,
-  riderStage,
   sampleArrivalWindow,
+  type RiderStage,
 } from "@/lib/client/riderTracker";
-import type { OrderStatus } from "@/lib/db/types";
 
 const ICONS: IconName[] = ["search", "scooter", "box", "home"];
-
-/** When the card first appeared for this order, kept per tab so a reload does not restart the demo. */
-function startedAtFor(orderId: string, now: Date): number {
-  const key = `printgo:rider-sim:${orderId}`;
-  try {
-    const saved = Number(sessionStorage.getItem(key));
-    if (Number.isFinite(saved) && saved > 0) return saved;
-    sessionStorage.setItem(key, String(now.getTime()));
-  } catch {
-    // storage blocked: the simulation simply restarts on reload
-  }
-  return now.getTime();
-}
 
 /**
  * Grab-style delivery tracking: arrival window, what the rider is doing, and four stages in a row.
  * SIMULATED (6 s per stage) until a real rider feed exists, and it says so on the card.
  */
 export function RiderTracker({
-  orderId,
-  status,
+  simulation: { startedAt, stage },
   now,
 }: {
-  orderId: string;
-  status: OrderStatus;
+  simulation: { startedAt: number; stage: RiderStage };
   now: Date;
 }) {
-  const [startedAt] = useState(() => startedAtFor(orderId, now));
-  const stage = riderStage(status, now.getTime() - startedAt);
   const current = RIDER_STAGES[stage];
   const window = sampleArrivalWindow(startedAt);
   const arrived = stage === 3;

@@ -22,7 +22,13 @@ export { PageShell } from "./PageShell";
 export { Skeleton, SkeletonCard } from "./Skeleton";
 export { Spinner } from "./Spinner";
 export { EmptyState, ErrorState } from "./States";
-export { ORDER_STATUS_INFO, TONE_CLASSES, orderStatusLabel, type StatusTone } from "./status";
+export {
+  ORDER_STATUS_INFO,
+  TONE_CLASSES,
+  isHandedOffToDelivery,
+  orderStatusLabel,
+  type StatusTone,
+} from "./status";
 export { Timeline, type TimelineStep, type TimelineStepState } from "./Timeline";
 export { ToastProvider, useToast, type ToastTone } from "./Toast";
 export { NumberStepper } from "./NumberStepper";
