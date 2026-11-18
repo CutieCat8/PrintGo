@@ -238,13 +238,13 @@
     .chip { height: 52px; padding: 0 24px; border-radius: 999px; border: 2px solid rgb(246 245 242 / 0.4); font-size: 28px; font-weight: 600; display: inline-flex; align-items: center; white-space: nowrap; }
 
     /* ---- 12 close ---- */
-    .s12 .word { position: absolute; left: 110px; top: 210px; font-size: 200px; font-weight: 700; line-height: 1; letter-spacing: -0.03em; }
-    .s12 .word .g { color: var(--forest-light); }
-    .s12 .tag { position: absolute; left: 114px; top: 440px; font-size: 70px; font-weight: 700; line-height: 1.25; color: var(--forest-light); }
-    .s12 .team { position: absolute; left: 118px; top: 720px; font-size: 44px; font-weight: 600; }
-    .s12 .team span { color: var(--on-dark-soft); font-weight: 500; margin-right: 22px; }
-    .s12 .thanks { position: absolute; left: 118px; bottom: 90px; font-size: 64px; font-weight: 700; }
-    .s12 .art { position: absolute; right: 100px; top: 220px; width: 620px; height: 420px; }
+    .s12 .top { position: absolute; left: 140px; right: 140px; top: 96px; display: flex; justify-content: space-between; align-items: baseline; font-size: 34px; font-weight: 500; color: var(--on-dark-soft); }
+    .s12 .top b { color: var(--paper); font-weight: 700; letter-spacing: -0.01em; }
+    .s12 .tag { position: absolute; left: 134px; top: 330px; font-size: 140px; white-space: nowrap; font-weight: 600; line-height: 1.12; letter-spacing: -0.035em; color: var(--paper); }
+    .s12 .tag em { display: block; font-style: normal; color: var(--forest-light); }
+    .s12 .foot { position: absolute; left: 140px; right: 140px; bottom: 96px; padding-top: 34px; border-top: 2px solid rgb(246 245 242 / 0.22); display: flex; justify-content: space-between; align-items: baseline; font-size: 40px; font-weight: 500; }
+    .s12 .foot .ty { color: var(--paper); }
+    .s12 .foot .q { color: var(--on-dark-soft); }
 
     /* ---- chrome ---- */
     #dots { position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); display: flex; gap: 10px; z-index: 5; opacity: 0.5; transition: opacity 200ms; }
@@ -578,21 +578,9 @@
 
 <!-- 12 close -->
 <section class="slide s12 dark">
-  <div class="word rise"><span>Print</span><span class="g">Go</span></div>
-  <p class="tag rise" style="--d:80ms">Your file goes in.<br />Your print comes home.</p>
-  <div class="team rise" style="--d:160ms"><span>ทีม</span>ซี · พลุ · ยูริ · อาร์ม</div>
-  <div class="thanks rise" style="--d:240ms">ขอบคุณครับ/ค่ะ · ถามได้เลย</div>
-  <svg class="art rise" style="--d:120ms" viewBox="0 0 620 420" fill="none" aria-hidden="true">
-    <circle cx="170" cy="200" r="170" fill="#14532d" opacity="0.35"/>
-    <rect x="40" y="110" width="400" height="240" rx="86" fill="#f6f5f2"/>
-    <ellipse cx="170" cy="215" rx="26" ry="32" fill="#1a1815"/><ellipse cx="310" cy="215" rx="26" ry="32" fill="#1a1815"/>
-    <circle cx="112" cy="268" r="26" fill="#14532d" opacity="0.28"/><circle cx="368" cy="268" r="26" fill="#14532d" opacity="0.28"/>
-    <path d="M200 268c26 38 66 38 92 0" stroke="#1a1815" stroke-width="18" stroke-linecap="round"/>
-    <rect x="110" y="320" width="260" height="26" rx="13" fill="#1a1815"/>
-    <rect x="150" y="332" width="180" height="84" rx="8" fill="#fff"/>
-    <rect x="176" y="356" width="128" height="10" rx="5" fill="#d6d2cb"/><rect x="176" y="378" width="86" height="10" rx="5" fill="#d6d2cb"/>
-    <circle cx="470" cy="300" r="40" fill="#14532d"/><path d="M450 300l14 14 28-30" stroke="#fff" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
-  </svg>
+  <div class="top rise"><b>PrintGo</b><span>ซี · พลุ · ยูริ · อาร์ม</span></div>
+  <p class="tag rise" style="--d:80ms">Your file goes in.<em>Your print comes home.</em></p>
+  <div class="foot rise" style="--d:200ms"><span class="ty">ขอบคุณครับ/ค่ะ</span><span class="q">ถามได้เลย</span></div>
   <aside class="notes sr">เวลา 12:00 เป็นต้นไป
 กลับมาที่แท็กไลน์: "Your file goes in. Your print comes home."
 ขอบคุณครับ/ค่ะ ถามได้เลย
