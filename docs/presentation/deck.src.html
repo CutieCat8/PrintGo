@@ -55,6 +55,10 @@
     .s1 .word { position: absolute; left: 112px; top: 190px; font-size: 360px; font-weight: 600; line-height: 1; letter-spacing: -0.045em; }
     .s1 .word .g { color: var(--forest-light); }
     .s1 .tag { position: absolute; left: 124px; top: 640px; font-size: 62px; font-weight: 500; line-height: 1.3; color: var(--on-dark-soft); }
+    .s1 .qr { position: absolute; right: 124px; top: 190px; width: 400px; }
+    .s1 .qr img { display: block; width: 400px; height: 400px; background: #fff; padding: 20px; box-sizing: border-box; image-rendering: pixelated; }
+    .s1 .qr p { margin: 22px 0 0; font-size: 32px; font-weight: 500; line-height: 1.35; color: var(--on-dark-soft); }
+    .s1 .qr p b { display: block; color: #fff; font-weight: 600; font-size: 38px; }
     .s1 .foot { position: absolute; left: 124px; right: 124px; bottom: 90px; padding-top: 32px; border-top: 2px solid var(--rule-dark); font-size: 40px; font-weight: 500; }
 
     /* ---- 2 scenario ---- */
@@ -222,6 +226,7 @@
 <section class="slide s1 dark on">
   <div class="word rise"><span>Print</span><span class="g">Go</span></div>
   <p class="tag rise" style="--d:100ms">Your file goes in.<br />Your print comes home.</p>
+  <div class="qr rise" style="--d:140ms"><img alt="QR code เพิ่มเพื่อน PrintGo ใน LINE" src="__IMG_QR__" /><p><b>สแกนเพื่อลองใช้</b>เพิ่มเพื่อน PrintGo ใน LINE</p></div>
   <div class="foot rise" style="--d:180ms">สั่งปริ้นผ่าน LINE เดียว เลือกได้หลายร้าน</div>
   <aside class="notes sr">เวลา 0:00-0:30 (30 วินาที)
 สวัสดีครับ/ค่ะ พวกเราทีม PrintGo ทำระบบให้สั่งปริ้นผ่าน LINE ที่เดียว แล้วเลือกได้ว่าจะให้ร้านไหนปริ้น
