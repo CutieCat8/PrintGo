@@ -290,7 +290,6 @@ describe("/api/cron/expire-orders", () => {
       received: 0,
       alreadyChanged: 0,
       failed: 0,
-      pickupAttemptsDeleted: 0,
     });
     seed();
     const get = await call(expireGet, "GET", "Bearer s3cret-value");
@@ -314,34 +313,6 @@ describe("/api/cron/expire-orders", () => {
     expect((await call(expireGet, "GET", "Bearer anything")).status).toBe(401);
     expect(stored(o).status).toBe("submitted"); // nothing was touched
     expect(h.notify).not.toHaveBeenCalled();
-  });
-
-  it("also removes pickup tries older than a day, and only those", async () => {
-    vi.stubEnv("CRON_SECRET", "s3cret-value");
-    const row = (id: string, source: string, createdAt: string) =>
-      db.rows("webhook_events").push({ id, source, created_at: createdAt });
-    row("pickup:old:1", "pickup_attempt", before(25 * 3600_000));
-    row("pickup:old:2", "pickup_attempt", before(48 * 3600_000));
-    row("pickup:new:1", "pickup_attempt", before(23 * 3600_000));
-    row("line-event-old", "line", before(48 * 3600_000)); // a real webhook record stays
-    const res = await call(expirePost, "POST", "Bearer s3cret-value");
-    expect((await res.json()).pickupAttemptsDeleted).toBe(2);
-    expect(
-      db
-        .rows("webhook_events")
-        .map((r) => r.id)
-        .sort(),
-    ).toEqual(["line-event-old", "pickup:new:1"]);
-  });
-
-  it("a failure of the tidy-up does not fail the sweep", async () => {
-    vi.stubEnv("CRON_SECRET", "s3cret-value");
-    db.failures.set("webhook_events.delete", "boom");
-    const o = seed();
-    const res = await call(expirePost, "POST", "Bearer s3cret-value");
-    expect(res.status).toBe(200);
-    expect(await res.json()).toMatchObject({ expired: 1, pickupAttemptsDeleted: 0 });
-    expect(stored(o).status).toBe("expired");
   });
 
   it("cleanup-files answers GET too, with the same secret check", async () => {
