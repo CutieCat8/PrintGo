@@ -10,8 +10,7 @@
   <style>
     /*
      * PrintGo pitch deck, 1920 x 1080. 7 minutes of slides (1-9), then the live demo (10, 5 minutes),
-     * then the close (11). Story follows the team's first deck (problem -> causes -> why one OA ->
-     * flow -> product -> customers -> revenue -> build -> risks) in the app's own theme.
+     * then the close (11). Minimal editorial layout: type, hairlines and one green accent. No illustrations.
      * Keys: arrows / space = move, S = notes + timer, T = start/stop timer, R = reset, F = full screen,
      * 1-9 = jump. Print to PDF = one slide per page.
      */
@@ -22,221 +21,168 @@
       --paper: #f6f5f2;
       --white: #ffffff;
       --line: #d6d2cb;
-      --hair: #ebe8e3;
       --forest: #14532d;
       --forest-light: #86d4a6;
-      --forest-wash: #e3efe7;
       --on-dark: #f6f5f2;
-      --on-dark-soft: rgb(246 245 242 / 0.74);
+      --on-dark-soft: rgb(246 245 242 / 0.7);
+      --rule-dark: rgb(246 245 242 / 0.22);
       --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
     }
     * { box-sizing: border-box; }
     html, body { margin: 0; height: 100%; overflow: hidden; background: #0e0d0b; }
     body { font-family: "Prompt", ui-sans-serif, system-ui, sans-serif; color: var(--ink); }
-    h1, h2, h3, p { margin: 0; }
+    h1, h2, h3, p, ul { margin: 0; }
 
     #stage { position: absolute; left: 50%; top: 50%; width: 1920px; height: 1080px; transform-origin: center center; overflow: hidden; background: var(--ink); }
-    .slide { position: absolute; inset: 0; padding: 78px 110px 70px; opacity: 0; visibility: hidden; transition: opacity 320ms var(--ease), visibility 0s linear 320ms; }
+    .slide { position: absolute; inset: 0; padding: 76px 120px 64px; display: flex; flex-direction: column; opacity: 0; visibility: hidden; transition: opacity 320ms var(--ease), visibility 0s linear 320ms; }
     .slide.on { opacity: 1; visibility: visible; transition: opacity 320ms var(--ease); }
     .dark { background: var(--ink); color: var(--on-dark); }
     .light { background: var(--paper); color: var(--ink); }
-    .slide .rise { opacity: 0; transform: translateY(16px); }
+    .slide .rise { opacity: 0; transform: translateY(14px); }
     .slide.on .rise { opacity: 1; transform: none; transition: opacity 480ms var(--ease) var(--d, 0ms), transform 480ms var(--ease) var(--d, 0ms); }
 
-    .h { font-size: 84px; font-weight: 700; line-height: 1.14; letter-spacing: -0.01em; text-wrap: balance; }
-    h3, .cap, .lead, figcaption { text-wrap: balance; }
+    .run { display: flex; justify-content: space-between; align-items: baseline; font-size: 26px; font-weight: 500; color: var(--ink-subtle); padding-bottom: 20px; border-bottom: 2px solid var(--line); margin-bottom: 44px; flex: none; }
+    .run b { color: var(--ink); font-weight: 600; margin-right: 18px; }
+    .h { font-size: 80px; font-weight: 600; line-height: 1.15; letter-spacing: -0.02em; text-wrap: balance; }
     .h .a { color: var(--forest); }
-    .dark .h .a { color: var(--forest-light); }
-    .lead { font-size: 40px; font-weight: 500; line-height: 1.4; color: var(--ink-soft); }
-    .tagpill { display: inline-flex; align-items: center; white-space: nowrap; flex: none; height: 52px; padding: 0 26px; border-radius: 999px; background: var(--forest); color: var(--white); font-size: 28px; font-weight: 600; }
-    .note { font-size: 26px; font-weight: 500; color: var(--ink-subtle); }
-    .box { background: var(--white); border: 2px solid var(--line); border-radius: 28px; }
-    .band { display: flex; align-items: center; gap: 0; background: var(--ink); color: var(--on-dark); border-radius: 24px; overflow: hidden; }
-    .band::before { content: ""; align-self: stretch; width: 22px; background: var(--forest-light); }
+    .lead { font-size: 38px; font-weight: 500; line-height: 1.4; color: var(--ink-soft); }
+    h3, .lead { text-wrap: balance; }
+    .note { font-size: 24px; font-weight: 500; color: var(--ink-subtle); }
+    .push { margin-top: auto; }
 
     /* ---- 1 title ---- */
-    .s1 .word { position: absolute; left: 110px; top: 170px; font-size: 250px; font-weight: 700; line-height: 1; letter-spacing: -0.03em; }
+    .s1 { padding: 0; }
+    .s1 .word { position: absolute; left: 112px; top: 190px; font-size: 360px; font-weight: 600; line-height: 1; letter-spacing: -0.045em; }
     .s1 .word .g { color: var(--forest-light); }
-    .s1 .bar { position: absolute; left: 118px; top: 468px; width: 460px; height: 12px; border-radius: 6px; background: var(--forest-light); }
-    .s1 .tag { position: absolute; left: 114px; top: 536px; font-size: 76px; font-weight: 700; line-height: 1.22; color: var(--forest-light); }
-    .s1 .sub { position: absolute; left: 118px; top: 800px; font-size: 48px; font-weight: 500; color: var(--on-dark-soft); }
-    .s1 .art { position: absolute; right: 60px; top: 60px; width: 800px; height: 960px; }
+    .s1 .tag { position: absolute; left: 124px; top: 640px; font-size: 62px; font-weight: 500; line-height: 1.3; color: var(--on-dark-soft); }
+    .s1 .foot { position: absolute; left: 124px; right: 124px; bottom: 90px; padding-top: 32px; border-top: 2px solid var(--rule-dark); font-size: 40px; font-weight: 500; }
 
     /* ---- 2 scenario ---- */
-    .s2 .head { display: flex; flex-direction: column; gap: 26px; max-width: 1200px; }
-    .s2 .night { position: absolute; right: 110px; top: 70px; width: 470px; height: 300px; border-radius: 32px; background: var(--ink); color: var(--on-dark); padding: 34px 40px; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; }
-    .s2 .night .clock { font-size: 112px; font-weight: 700; line-height: 1; }
-    .s2 .night .cap { font-size: 30px; font-weight: 500; color: var(--on-dark-soft); max-width: 300px; line-height: 1.35; }
-    .s2 .night svg { position: absolute; right: 30px; bottom: 26px; width: 92px; height: 92px; }
-    .flow { position: absolute; left: 110px; right: 110px; top: 470px; display: grid; grid-template-columns: 1fr 70px 1fr 70px 1fr 70px 1fr; align-items: stretch; }
-    .flow .arr { display: grid; place-items: center; }
-    .flow .arr svg { width: 54px; height: 54px; }
-    .pcard { position: relative; padding: 44px 30px 46px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 0; }
-    .pcard .n { position: absolute; left: 22px; top: 18px; width: 56px; height: 56px; border-radius: 50%; background: var(--forest); color: var(--white); font-size: 30px; font-weight: 700; display: grid; place-items: center; }
-    .pcard svg.ill { width: 280px; height: 178px; margin-top: 12px; }
-    .pcard h3 { margin-top: 28px; font-size: 37px; font-weight: 700; line-height: 1.28; }
-    .pcard p { margin-top: 10px; font-size: 30px; font-weight: 500; color: var(--ink-soft); line-height: 1.35; }
+    .s2 .h { max-width: 1400px; margin-bottom: 26px; }
+    .cols4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 56px; padding-bottom: 36px; }
+    .cols4 .c { border-top: 3px solid var(--ink); padding-top: 24px; }
+    .cols4 .n { font-size: 34px; font-weight: 600; color: var(--forest); }
+    .cols4 h3 { margin-top: 44px; font-size: 41px; font-weight: 600; line-height: 1.25; }
+    .cols4 p { margin-top: 20px; font-size: 31px; font-weight: 500; line-height: 1.45; color: var(--ink-soft); }
 
     /* ---- 3 causes ---- */
-    .s3 .h { margin-bottom: 38px; }
-    .s3 .grid { display: grid; grid-template-columns: 820px 120px 1fr; align-items: center; }
-    .two { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
-    .mini { background: var(--white); border: 2px solid var(--line); border-radius: 24px; overflow: hidden; }
-    .mini h3 { background: var(--ink); color: var(--on-dark); text-align: center; font-size: 36px; font-weight: 700; padding: 16px 10px; }
-    .mini ul { list-style: none; margin: 0; padding: 22px 26px; display: flex; flex-direction: column; gap: 22px; font-size: 31px; font-weight: 500; line-height: 1.35; }
-    .causes { display: flex; flex-direction: column; gap: 18px; }
-    .cause { display: flex; align-items: center; gap: 28px; padding: 0 32px; height: 112px; background: var(--white); border: 2px solid var(--line); border-radius: 24px; font-size: 46px; font-weight: 700; white-space: nowrap; }
-    .cause b { font-size: 70px; color: var(--forest); width: 60px; }
-    .s3 .bigarrow { display: grid; place-items: center; }
-    .s3 .bigarrow svg { width: 96px; height: 120px; }
-    .s3 .band { margin-top: 38px; height: 150px; }
-    .s3 .band .q { flex: 1; text-align: center; font-size: 40px; font-weight: 600; line-height: 1.35; padding: 0 30px; }
-    .s3 .band .q + .q { border-left: 2px solid rgb(246 245 242 / 0.25); }
-    .s3 .src { margin-top: 14px; }
+    .s3 .h { font-size: 72px; margin-bottom: 34px; }
+    .s3 .grid { display: grid; grid-template-columns: 1fr 720px; gap: 120px; }
+    .who { display: grid; grid-template-columns: 1fr 1fr; gap: 52px; }
+    .who h3 { font-size: 34px; font-weight: 600; color: var(--forest); padding-bottom: 16px; border-bottom: 2px solid var(--ink); margin-bottom: 26px; }
+    .who ul { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 20px; font-size: 29px; font-weight: 500; line-height: 1.4; color: var(--ink-soft); }
+    .causes { border-top: 2px solid var(--ink); }
+    .cause { display: flex; align-items: baseline; gap: 34px; padding: 14px 0; border-bottom: 2px solid var(--line); font-size: 48px; font-weight: 600; white-space: nowrap; }
+    .cause b { font-size: 34px; color: var(--forest); width: 44px; font-weight: 600; }
+    .quotes { display: grid; grid-template-columns: 1fr 1fr; gap: 72px; padding-top: 24px; }
+    .quotes p { border-left: 5px solid var(--forest); padding-left: 28px; font-size: 31px; font-weight: 500; line-height: 1.45; }
+    .s3 .src { margin-top: 18px; }
 
     /* ---- 4 one OA ---- */
-    .s4 .h { margin-bottom: 34px; }
-    .s4 .cols { display: grid; grid-template-columns: 1fr 90px 1fr; align-items: center; }
-    .panel { height: 770px; padding: 40px 44px; display: flex; flex-direction: column; align-items: center; }
-    .panel.before { background: #eceae5; border: 2px solid var(--line); border-radius: 28px; }
-    .panel.after { background: var(--white); border: 4px solid var(--forest); border-radius: 28px; }
-    .panel .kick { font-size: 34px; font-weight: 700; color: var(--ink-soft); }
-    .panel.after .kick { color: var(--forest); }
-    .panel h3 { font-size: 56px; font-weight: 700; line-height: 1.2; }
-    .panel .sm { font-size: 30px; font-weight: 500; color: var(--ink-soft); margin-top: 2px; }
-    .oas { margin-top: 30px; display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; width: 100%; }
-    .oas div { background: #d9d6cf; border-radius: 14px; height: 118px; display: grid; place-items: center; text-align: center; font-size: 28px; font-weight: 600; line-height: 1.15; color: var(--ink-soft); }
-    .panel hr { border: 0; border-top: 2px solid #cfcbc3; width: 100%; margin: 34px 0 22px; }
-    .panel .cap { font-size: 33px; font-weight: 600; text-align: center; line-height: 1.4; }
-    .tree { margin-top: 26px; width: 100%; height: 390px; }
-    .s4 .mid { display: grid; place-items: center; }
-    .s4 .mid svg { width: 70px; height: 70px; }
+    .s4 .h { margin-bottom: 20px; }
+    .s4 .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 120px; margin-top: auto; padding-bottom: 30px; }
+    .s4 .col { border-top: 3px solid var(--ink); padding-top: 26px; }
+    .s4 .kick { font-size: 32px; font-weight: 600; color: var(--ink-subtle); }
+    .s4 .after .kick { color: var(--forest); }
+    .s4 .num { display: flex; align-items: baseline; gap: 28px; margin-top: 6px; font-size: 380px; font-weight: 600; line-height: 1.05; letter-spacing: -0.05em; color: var(--ink-subtle); }
+    .s4 .num span { font-size: 64px; letter-spacing: 0; font-weight: 600; }
+    .s4 .after .num { color: var(--forest); }
+    .s4 .cap { margin-top: 6px; font-size: 36px; font-weight: 500; line-height: 1.5; color: var(--ink-soft); }
+    .s4 .shops { margin-top: 18px; font-size: 30px; font-weight: 600; color: var(--ink); }
 
     /* ---- 5 six steps ---- */
-    .s5 .h { margin-bottom: 26px; }
-    .lanes { position: relative; height: 560px; }
-    .lane { position: absolute; left: 0; right: 0; height: 160px; display: flex; border-radius: 24px; overflow: hidden; }
-    .lane .lbl { width: 230px; display: grid; place-items: center; font-size: 38px; font-weight: 700; color: var(--on-dark); }
-    .lane .bg { flex: 1; }
-    .lane.c .lbl { background: var(--ink); } .lane.c .bg { background: #ebe9e4; }
-    .lane.p .lbl { background: var(--forest); } .lane.p .bg { background: var(--forest-wash); }
-    .lane.s .lbl { background: var(--ink); } .lane.s .bg { background: #ebe9e4; }
-    .st { position: absolute; display: inline-flex; align-items: center; gap: 18px; height: 88px; padding: 0 26px 0 14px; background: var(--white); border-radius: 22px; box-shadow: 0 6px 18px rgb(26 24 21 / 0.10); font-size: 36px; font-weight: 700; white-space: nowrap; }
-    .st i { font-style: normal; width: 52px; height: 52px; border-radius: 14px; background: var(--forest); color: var(--white); font-size: 32px; display: grid; place-items: center; }
-    .lanes svg.links { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
-    .s5 .band { margin-top: 20px; height: 116px; font-size: 44px; font-weight: 700; }
-    .s5 .band .t { flex: 1; text-align: center; }
-    .s5 .band b { color: var(--forest-light); }
-    .feats { margin-top: 26px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
-    .feats div { display: flex; align-items: center; justify-content: center; text-align: center; height: 92px; padding: 0 16px; font-size: 29px; font-weight: 600; line-height: 1.3; border-left: 3px solid var(--forest); }
+    .s5 .h { margin-bottom: 20px; }
+    .steps { display: grid; grid-template-columns: repeat(6, 1fr); gap: 30px; margin-top: 30px; }
+    .steps .st { border-top: 3px solid var(--ink); padding-top: 18px; }
+    .steps .who { display: block; font-size: 24px; font-weight: 600; color: var(--forest); }
+    .steps .n { margin: 16px 0 14px; font-size: 100px; font-weight: 600; line-height: 1; letter-spacing: -0.03em; }
+    .steps h3 { font-size: 34px; font-weight: 600; line-height: 1.3; }
+    .say { margin-top: 64px; border-left: 6px solid var(--forest); padding: 6px 0 6px 36px; font-size: 52px; font-weight: 600; line-height: 1.3; }
+    .say b { color: var(--forest); font-weight: 600; }
+    .feats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 48px; padding-bottom: 34px; }
+    .feats div { border-top: 2px solid var(--line); padding-top: 20px; font-size: 30px; font-weight: 500; line-height: 1.45; color: var(--ink-soft); }
 
     /* ---- 6 product ---- */
     .s6 .top { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 30px; }
-    .shots { display: flex; gap: 40px; align-items: flex-end; }
-    .shot figcaption { margin-top: 16px; font-size: 30px; font-weight: 600; line-height: 1.35; text-align: center; }
+    .s6 .h { font-size: 72px; }
+    .shots { display: flex; gap: 44px; align-items: flex-end; margin-top: auto; padding-bottom: 6px; }
     .shot { margin: 0; }
-    .phone { width: 366px; height: 560px; border-radius: 40px; padding: 12px; background: var(--ink); box-shadow: 0 14px 40px rgb(26 24 21 / 0.22); }
-    .phone .scr { width: 100%; height: 100%; border-radius: 30px; overflow: hidden; background: var(--white); }
-    .phone .scr img { width: 100%; height: 100%; object-fit: cover; object-position: top; display: block; }
-    .desk { width: 880px; border-radius: 22px; background: var(--ink); padding: 14px; box-shadow: 0 14px 40px rgb(26 24 21 / 0.22); }
-    .desk .bar { height: 30px; display: flex; align-items: center; gap: 10px; padding: 0 8px 10px; }
-    .desk .bar i { width: 13px; height: 13px; border-radius: 50%; background: #55514b; }
-    .desk img { width: 100%; display: block; border-radius: 10px; }
+    .shot figcaption { margin-top: 18px; font-size: 28px; font-weight: 500; line-height: 1.4; color: var(--ink-soft); }
+    .phone { width: 330px; height: 540px; border-radius: 26px; overflow: hidden; border: 2px solid var(--line); background: var(--white); }
+    .phone img { width: 100%; height: 100%; object-fit: cover; object-position: top; display: block; }
+    .desk { width: 900px; border-radius: 12px; overflow: hidden; border: 2px solid var(--line); background: var(--white); }
+    .desk img { width: 100%; display: block; }
 
-    /* ---- 7 customers ---- */
-    .s7 .h { margin-bottom: 40px; }
-    .seg3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; }
-    .seg { background: var(--white); border: 2px solid var(--line); border-radius: 28px; overflow: hidden; display: flex; flex-direction: column; }
-    .seg .hd { background: var(--forest); color: var(--white); padding: 20px 26px; font-size: 36px; font-weight: 700; text-align: center; line-height: 1.25; }
-    .seg .av { height: 230px; background: var(--forest-wash); display: grid; place-items: center; }
-    .seg .av svg { width: 190px; height: 190px; }
-    .seg ul { list-style: none; margin: 0; padding: 28px 30px 30px; display: flex; flex-direction: column; gap: 20px; font-size: 32px; font-weight: 500; line-height: 1.4; color: var(--ink-soft); flex: 1; }
-    .seg li.hl { color: var(--ink); font-weight: 700; }
-    .seg li.hl::before { content: ""; display: inline-block; width: 16px; height: 16px; border-radius: 50%; background: var(--forest); margin-right: 14px; }
-
-    /* ---- 8 revenue ---- */
-    .s8 .head { display: flex; flex-direction: column; align-items: flex-start; gap: 18px; margin-bottom: 36px; }
-    .s8 .head .h { font-size: 78px; white-space: nowrap; }
-    .rows { display: flex; flex-direction: column; gap: 22px; }
-    .rowb { display: grid; grid-template-columns: 230px 1fr 400px; gap: 28px; align-items: center; }
-    .rowb .lbl { background: var(--ink); color: var(--on-dark); border-radius: 18px; height: 78px; display: grid; place-items: center; font-size: 36px; font-weight: 700; }
-    .track { position: relative; height: 78px; background: #e6e3dd; border-radius: 18px; overflow: hidden; display: flex; align-items: center; padding-left: 26px; font-size: 34px; font-weight: 600; color: var(--ink-soft); }
-    .track .fee { position: absolute; right: 0; top: 0; bottom: 0; background: var(--forest); border-radius: 0 18px 18px 0; }
-    .rowb .val { font-size: 38px; font-weight: 700; color: var(--forest); }
-    .formula { margin-top: 28px; display: flex; justify-content: center; align-items: center; gap: 30px; height: 100px; font-size: 36px; font-weight: 600; }
-    .formula b { color: var(--forest); }
-    .now2 { margin-top: 22px; display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
-    .now2 .c { border-radius: 24px; padding: 28px 36px; text-align: center; font-size: 38px; font-weight: 700; line-height: 1.4; }
-    .now2 .c.on { background: var(--white); border: 3px solid var(--forest); }
-    .now2 .c.later { background: #e6e3dd; color: var(--ink-soft); }
-    .now2 .c small { display: block; margin-bottom: 10px; font-size: 26px; font-weight: 700; color: var(--forest); }
+    /* ---- 7 revenue ---- */
+    .s8 .h { font-size: 76px; white-space: nowrap; margin-bottom: 28px; }
+    .rows { border-top: 2px solid var(--ink); }
+    .rowt { display: grid; grid-template-columns: 220px 1fr 440px; gap: 28px; align-items: baseline; padding: 16px 0; border-bottom: 2px solid var(--line); }
+    .rowt .l { font-size: 36px; font-weight: 600; }
+    .rowt .d { font-size: 32px; font-weight: 500; color: var(--ink-soft); }
+    .rowt .v { font-size: 46px; font-weight: 600; color: var(--forest); text-align: right; }
+    .formula { margin-top: 28px; font-size: 38px; font-weight: 500; }
+    .formula b { color: var(--forest); font-weight: 600; }
+    .now2 { margin-top: 30px; display: grid; grid-template-columns: 1fr 1fr; gap: 80px; }
+    .now2 .c { border-top: 3px solid var(--forest); padding-top: 16px; font-size: 34px; font-weight: 600; line-height: 1.4; }
+    .now2 .c small { display: block; margin-bottom: 8px; font-size: 26px; font-weight: 600; color: var(--forest); }
+    .now2 .c.later { border-top-color: var(--line); color: var(--ink-soft); }
     .now2 .c.later small { color: var(--ink-subtle); }
-    .s8 .note { margin-top: 18px; }
+    .s8 .note { margin-top: auto; padding-bottom: 6px; font-size: 22px; }
 
-    /* ---- 9 build ---- */
-    .s9 .head { margin-bottom: 30px; }
-    .s9 .head .h { font-size: 76px; }
-    .stack { display: grid; grid-template-columns: repeat(4, 1fr); gap: 22px; }
-    .stack .c { background: var(--white); border: 2px solid var(--line); border-radius: 24px; padding: 32px 32px; }
-    .stack .c.ext { border-color: var(--forest); }
-    .stack .c h3 { font-size: 48px; font-weight: 700; color: var(--forest); line-height: 1.2; }
-    .stack .c p { margin-top: 10px; font-size: 33px; font-weight: 600; line-height: 1.35; }
-    .dl { margin-top: 26px; }
-    .dl .tagpill { background: var(--ink); }
-    .dflow { margin-top: 20px; display: grid; grid-template-columns: 1fr 70px 1.25fr 70px 1fr; align-items: center; }
-    .dflow .b { height: 128px; display: grid; place-items: center; text-align: center; border-radius: 22px; background: #e6e3dd; font-size: 36px; font-weight: 700; line-height: 1.3; padding: 0 20px; }
-    .dflow .b.k { background: var(--forest); color: var(--white); }
-    .dflow .arr { display: grid; place-items: center; }
-    .dflow .arr svg { width: 56px; height: 56px; }
-    .three { margin-top: 24px; display: grid; grid-template-columns: repeat(3, 1fr); background: #ece9e3; border-radius: 22px; }
-    .three div { padding: 28px 32px; font-size: 30px; font-weight: 600; line-height: 1.45; }
-    .three div + div { border-left: 3px solid var(--line); }
-    .three b { color: var(--forest); }
-    .chips { margin-top: 24px; display: flex; flex-wrap: wrap; gap: 12px; }
-    .chips span { display: inline-flex; align-items: center; height: 54px; padding: 0 22px; border-radius: 999px; background: var(--white); border: 2px solid var(--line); font-size: 25px; font-weight: 600; white-space: nowrap; }
+    /* ---- 8 build ---- */
+    .s9 .h { font-size: 74px; margin-bottom: 34px; }
+    .stack { display: grid; grid-template-columns: repeat(4, 1fr); gap: 44px; }
+    .stack .c { border-top: 3px solid var(--ink); padding-top: 22px; }
+    .stack h3 { font-size: 46px; font-weight: 600; color: var(--forest); line-height: 1.2; }
+    .stack p { margin-top: 10px; font-size: 30px; font-weight: 500; line-height: 1.4; color: var(--ink-soft); }
+    .dl { margin-top: 38px; }
+    .dl .lbl { font-size: 28px; font-weight: 600; color: var(--forest); }
+    .dflow { margin-top: 14px; display: grid; grid-template-columns: auto auto auto auto auto; justify-content: space-between; gap: 24px; align-items: baseline; padding: 20px 0; white-space: nowrap; border-top: 2px solid var(--line); border-bottom: 2px solid var(--line); font-size: 34px; font-weight: 600; line-height: 1.35; }
+    .dflow .ar { color: var(--forest); font-size: 44px; }
+    .three { margin-top: 38px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 56px; font-size: 29px; font-weight: 500; line-height: 1.5; color: var(--ink-soft); }
+    .three b { color: var(--ink); font-weight: 600; }
+    .chips { margin-top: auto; padding-bottom: 6px; display: flex; flex-wrap: nowrap; font-size: 24px; font-weight: 500; color: var(--ink-soft); }
+    .chips span { padding: 0 20px; border-left: 2px solid var(--line); white-space: nowrap; line-height: 1.3; }
+    .chips span:first-child { padding-left: 0; border-left: 0; }
 
-    /* ---- 10 risks ---- */
-    .s10 .h { font-size: 66px; margin-bottom: 22px; }
-    .rk { display: grid; grid-template-columns: 1fr 520px; gap: 28px; }
-    .tbl { background: var(--white); border: 2px solid var(--line); border-radius: 26px; overflow: hidden; }
-    .tbl .th { display: grid; grid-template-columns: 340px 1fr; background: var(--ink); color: var(--on-dark); font-size: 32px; font-weight: 700; }
-    .tbl .th div { padding: 16px 28px; }
-    .tbl .tr { display: grid; grid-template-columns: 340px 1fr; border-top: 2px solid var(--hair); font-size: 27px; line-height: 1.36; }
-    .tbl .tr div { padding: 14px 28px; }
-    .tbl .tr div:first-child { font-weight: 700; }
+    /* ---- 9 risks ---- */
+    .s10 .h { font-size: 66px; margin-bottom: 26px; }
+    .rk { display: grid; grid-template-columns: 1fr 520px; gap: 64px; }
+    .tbl .th, .tbl .tr { display: grid; grid-template-columns: 360px 1fr; gap: 28px; }
+    .tbl .th { padding-bottom: 12px; border-bottom: 2px solid var(--ink); font-size: 26px; font-weight: 600; color: var(--forest); }
+    .tbl .tr { padding: 14px 0; border-bottom: 2px solid var(--line); font-size: 26px; line-height: 1.4; }
+    .tbl .tr div:first-child { font-weight: 600; font-size: 28px; }
     .tbl .tr div:last-child { color: var(--ink-soft); font-weight: 500; }
-    .road { background: #ece9e3; border-radius: 26px; padding: 30px 34px; }
-    .road h3 { font-size: 36px; font-weight: 700; margin-bottom: 18px; }
-    .stp { position: relative; padding-left: 50px; padding-bottom: 20px; font-size: 28px; line-height: 1.4; font-weight: 500; color: var(--ink-soft); }
-    .stp b { display: block; font-size: 33px; color: var(--ink); }
-    .stp::before { content: ""; position: absolute; left: 6px; top: 8px; width: 24px; height: 24px; border-radius: 50%; background: var(--forest); }
-    .stp::after { content: ""; position: absolute; left: 16px; top: 34px; width: 4px; bottom: -4px; background: var(--ink); }
-    .stp:last-child::after { display: none; }
-    .stp.muted::before { background: #aaa59d; }
-    .stp.muted b { color: var(--ink-subtle); }
-    .kpi { margin-top: 16px; display: flex; align-items: center; gap: 24px; height: 104px; background: var(--white); border: 3px solid var(--forest); border-radius: 24px; padding: 0 34px; font-size: 28px; font-weight: 700; }
-    .kpi .k { color: var(--forest); font-size: 32px; line-height: 1.2; flex: none; }
-    .kpi span.d { width: 3px; height: 54px; background: var(--line); flex: none; }
-    .s10 .note { margin-top: 10px; font-size: 24px; }
+    .road { border-left: 2px solid var(--line); padding-left: 44px; }
+    .road h3 { font-size: 30px; font-weight: 600; color: var(--forest); margin-bottom: 20px; }
+    .stp { padding-bottom: 26px; font-size: 27px; line-height: 1.45; font-weight: 500; color: var(--ink-soft); }
+    .stp b { display: block; font-size: 34px; font-weight: 600; color: var(--ink); margin-bottom: 4px; }
+    .stp.muted, .stp.muted b { color: var(--ink-subtle); }
+    .kpi { margin-top: auto; margin-bottom: 0; display: flex; align-items: center; border-top: 2px solid var(--ink); padding-top: 20px; font-size: 28px; font-weight: 600; }
+    .kpi .k { color: var(--forest); font-size: 26px; width: 190px; flex: none; }
+    .kpi span.i { flex: auto; white-space: nowrap; font-size: 26px; padding: 0 20px; border-left: 2px solid var(--line); line-height: 1.35; }
+    .s10 .note { margin-top: 16px; font-size: 23px; padding-bottom: 4px; }
 
-    /* ---- 11 demo ---- */
-    .s11 { display: grid; grid-template-columns: 620px 1fr; gap: 80px; align-items: center; padding-left: 120px; }
-    .s11 .big { font-size: 172px; font-weight: 700; line-height: 1; letter-spacing: -0.02em; white-space: nowrap; }
-    .s11 .dur { margin-top: 18px; font-size: 76px; font-weight: 600; color: var(--forest-light); }
-    .s11 .sub { margin-top: 30px; font-size: 38px; font-weight: 500; line-height: 1.45; color: var(--on-dark-soft); }
-    .beats { display: flex; flex-direction: column; border-top: 2px solid rgb(246 245 242 / 0.18); }
-    .beat { display: grid; grid-template-columns: 84px 1fr auto; gap: 34px; align-items: center; padding: 30px 0; border-bottom: 2px solid rgb(246 245 242 / 0.18); }
-    .beat .n { width: 72px; height: 72px; border-radius: 50%; border: 3px solid var(--forest-light); color: var(--forest-light); font-size: 36px; font-weight: 700; display: grid; place-items: center; }
-    .beat h3 { font-size: 52px; font-weight: 700; line-height: 1.2; }
-    .beat p { margin-top: 4px; font-size: 32px; font-weight: 500; color: var(--on-dark-soft); }
-    .chip { height: 52px; padding: 0 24px; border-radius: 999px; border: 2px solid rgb(246 245 242 / 0.4); font-size: 28px; font-weight: 600; display: inline-flex; align-items: center; white-space: nowrap; }
+    /* ---- 10 demo ---- */
+    .s11 { flex-direction: row; align-items: center; gap: 100px; padding: 70px 120px; }
+    .s11 .left { width: 600px; flex: none; }
+    .s11 .big { font-size: 170px; font-weight: 600; line-height: 1; letter-spacing: -0.03em; white-space: nowrap; }
+    .s11 .dur { margin-top: 20px; font-size: 72px; font-weight: 600; color: var(--forest-light); }
+    .s11 .sub { margin-top: 30px; font-size: 38px; font-weight: 500; line-height: 1.5; color: var(--on-dark-soft); }
+    .beats { flex: 1; display: flex; flex-direction: column; border-top: 2px solid var(--rule-dark); }
+    .beat { display: grid; grid-template-columns: 70px 1fr auto; gap: 28px; align-items: baseline; padding: 30px 0; border-bottom: 2px solid var(--rule-dark); }
+    .beat .n { font-size: 36px; font-weight: 600; color: var(--forest-light); }
+    .beat h3 { font-size: 50px; font-weight: 600; line-height: 1.2; }
+    .beat p { margin-top: 6px; font-size: 30px; font-weight: 500; color: var(--on-dark-soft); }
+    .beat .w { font-size: 26px; font-weight: 500; color: var(--on-dark-soft); white-space: nowrap; }
 
-    /* ---- 12 close ---- */
+    /* ---- 11 close ---- */
+    .s12 { padding: 0; }
     .s12 .top { position: absolute; left: 140px; right: 140px; top: 96px; display: flex; justify-content: space-between; align-items: baseline; font-size: 34px; font-weight: 500; color: var(--on-dark-soft); }
     .s12 .top b { color: var(--paper); font-weight: 700; letter-spacing: -0.01em; }
     .s12 .tag { position: absolute; left: 134px; top: 330px; font-size: 140px; white-space: nowrap; font-weight: 600; line-height: 1.12; letter-spacing: -0.035em; color: var(--paper); }
     .s12 .tag em { display: block; font-style: normal; color: var(--forest-light); }
-    .s12 .foot { position: absolute; left: 140px; right: 140px; bottom: 96px; padding-top: 34px; border-top: 2px solid rgb(246 245 242 / 0.22); display: flex; justify-content: space-between; align-items: baseline; font-size: 40px; font-weight: 500; }
+    .s12 .foot { position: absolute; left: 140px; right: 140px; bottom: 96px; padding-top: 34px; border-top: 2px solid var(--rule-dark); display: flex; justify-content: space-between; align-items: baseline; font-size: 40px; font-weight: 500; }
     .s12 .foot .ty { color: var(--paper); }
     .s12 .foot .q { color: var(--on-dark-soft); }
 
@@ -269,49 +215,14 @@
   </style>
 </head>
 <body>
-<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
-  <defs>
-    <marker id="ah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1 1l8 4-8 4z" fill="#14532d"/></marker>
-  </defs>
-</svg>
 
 <div id="stage">
 
 <!-- 1 title -->
 <section class="slide s1 dark on">
   <div class="word rise"><span>Print</span><span class="g">Go</span></div>
-  <div class="bar rise" style="--d:60ms"></div>
-  <p class="tag rise" style="--d:120ms">Your file goes in.<br />Your print comes home.</p>
-  <p class="sub rise" style="--d:200ms">สั่งปริ้นผ่าน LINE เดียว เลือกได้หลายร้าน</p>
-  <svg class="art rise" style="--d:160ms" viewBox="0 0 800 960" fill="none" aria-hidden="true">
-    <!-- phone -->
-    <rect x="150" y="30" width="430" height="800" rx="64" fill="#f6f5f2"/>
-    <rect x="168" y="48" width="394" height="764" rx="50" fill="#ffffff"/>
-    <rect x="290" y="62" width="150" height="34" rx="17" fill="#1a1815"/>
-    <rect x="192" y="140" width="250" height="84" rx="26" fill="#1a1815"/>
-    <path d="M215 224l-4 26 30-26z" fill="#1a1815"/>
-    <text x="317" y="194" font-family="Prompt" font-size="34" font-weight="700" fill="#fff" text-anchor="middle">ขาวดำหรือสี?</text>
-    <rect x="296" y="268" width="250" height="84" rx="26" fill="#e9e6e0"/>
-    <text x="421" y="322" font-family="Prompt" font-size="32" font-weight="700" fill="#1a1815" text-anchor="middle">กี่หน้า? กี่ชุด?</text>
-    <rect x="212" y="398" width="318" height="140" rx="30" fill="#14532d"/>
-    <text x="371" y="456" font-family="Prompt" font-size="32" font-weight="700" fill="#fff" text-anchor="middle">ส่งไฟล์ในแชท</text>
-    <text x="371" y="504" font-family="Prompt" font-size="32" font-weight="700" fill="#fff" text-anchor="middle">โดนถามกลับไปมา</text>
-    <rect x="196" y="600" width="340" height="120" rx="26" fill="#f6f5f2"/>
-    <path d="M230 630h40l18 18v44h-58z" fill="#57534e"/>
-    <text x="312" y="656" font-family="Prompt" font-size="30" font-weight="700" fill="#1a1815">งานพิมพ์.pdf</text>
-    <text x="312" y="696" font-family="Prompt" font-size="26" font-weight="500" fill="#78716c">2.4 MB</text>
-    <!-- paper + dotted path + house -->
-    <rect x="600" y="150" width="130" height="150" rx="14" fill="#ffffff"/>
-    <path d="M706 150l24 24h-24z" fill="#86d4a6"/>
-    <rect x="626" y="196" width="78" height="10" rx="5" fill="#d6d2cb"/><rect x="626" y="224" width="78" height="10" rx="5" fill="#d6d2cb"/><rect x="626" y="252" width="52" height="10" rx="5" fill="#d6d2cb"/>
-    <path d="M530 470C610 470 650 410 640 310" stroke="#86d4a6" stroke-width="7" stroke-linecap="round" stroke-dasharray="2 18"/>
-    <path d="M664 320C664 460 690 560 650 700" stroke="#86d4a6" stroke-width="7" stroke-linecap="round" stroke-dasharray="2 18"/>
-    <path d="M530 880c60-80 230-110 270-20v100h-270z" fill="#14532d"/>
-    <rect x="590" y="690" width="200" height="170" rx="10" fill="#f6f5f2"/>
-    <path d="M572 706 690 618l118 88z" fill="#86d4a6"/>
-    <rect x="662" y="768" width="56" height="92" rx="10" fill="#1a1815"/>
-    <rect x="602" y="740" width="44" height="44" rx="6" fill="#d3e9e5"/><rect x="734" y="740" width="44" height="44" rx="6" fill="#d3e9e5"/>
-  </svg>
+  <p class="tag rise" style="--d:100ms">Your file goes in.<br />Your print comes home.</p>
+  <div class="foot rise" style="--d:180ms">สั่งปริ้นผ่าน LINE เดียว เลือกได้หลายร้าน</div>
   <aside class="notes sr">เวลา 0:00-0:30 (30 วินาที)
 สวัสดีครับ/ค่ะ พวกเราทีม PrintGo ทำระบบให้สั่งปริ้นผ่าน LINE ที่เดียว แล้วเลือกได้ว่าจะให้ร้านไหนปริ้น
 ภาพนี้คือเรื่องที่ทุกคนเคยเจอ ส่งไฟล์ไปในแชท แล้วโดนถามกลับมาเรื่อยๆ "ขาวดำหรือสี กี่หน้า กี่ชุด" กว่างานจะถึงมือก็นาน
@@ -321,32 +232,14 @@
 
 <!-- 2 scenario -->
 <section class="slide s2 light">
-  <div class="head">
-    <span class="tagpill rise" style="width:max-content">สถานการณ์จำลอง</span>
-    <h1 class="h rise" style="--d:60ms">แค่อยากปริ้นรายงาน…<br />ทำไมมัน<span class="a">วุ่นขนาดนี้</span></h1>
-    <p class="lead rise" style="--d:120ms">ลองนึกถึงมายด์ นักศึกษาที่ต้องส่งรายงานพรุ่งนี้เช้า</p>
-  </div>
-  <div class="night rise" style="--d:140ms">
-    <svg viewBox="0 0 24 24" fill="none" stroke="#86d4a6" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5z"/></svg>
-    <div class="clock">23:00</div>
-    <div class="cap">รายงานต้องส่งพรุ่งนี้เช้า</div>
-  </div>
-  <div class="flow">
-    <div class="box pcard rise" style="--d:200ms"><div class="n">1</div>
-      <svg class="ill" viewBox="0 0 300 190" fill="none"><path d="M120 6v34" stroke="#1a1815" stroke-width="6" stroke-linecap="round"/><circle cx="120" cy="8" r="8" fill="#1a1815"/><rect x="40" y="40" width="160" height="110" rx="18" fill="#1a1815"/><text x="120" y="118" font-family="Prompt" font-size="64" font-weight="700" fill="#fff" text-anchor="middle">ปิด</text></svg>
-      <h3>ร้านใกล้ๆ<br />ปิดไปแล้ว</h3><p>ไม่รู้ว่าร้านไหน<br />ยังเปิดอยู่บ้าง</p></div>
-    <div class="arr"><svg viewBox="0 0 24 24" fill="none" stroke="#14532d" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
-    <div class="box pcard rise" style="--d:300ms"><div class="n">2</div>
-      <svg class="ill" viewBox="0 0 300 190" fill="none"><rect x="8" y="14" width="196" height="70" rx="22" fill="#1a1815"/><text x="106" y="60" font-family="Prompt" font-size="27" font-weight="700" fill="#fff" text-anchor="middle">ขาวดำหรือสี?</text><rect x="92" y="104" width="196" height="70" rx="22" fill="#e9e6e0"/><text x="190" y="150" font-family="Prompt" font-size="27" font-weight="700" fill="#1a1815" text-anchor="middle">กี่หน้า? กี่ชุด?</text></svg>
-      <h3>ส่งไฟล์ไปในแชท<br />โดนถามกลับมาเรื่อยๆ</h3><p>ขาวดำหรือสี?<br />กี่หน้า? กี่ชุด?</p></div>
-    <div class="arr"><svg viewBox="0 0 24 24" fill="none" stroke="#14532d" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
-    <div class="box pcard rise" style="--d:400ms"><div class="n">3</div>
-      <svg class="ill" viewBox="0 0 300 190" fill="none"><circle cx="86" cy="96" r="68" fill="#14532d"/><text x="86" y="124" font-family="Prompt" font-size="84" font-weight="700" fill="#fff" text-anchor="middle">฿</text><text x="190" y="128" font-family="Prompt" font-size="120" font-weight="700" fill="#1a1815" text-anchor="middle">?</text></svg>
-      <h3>ไม่รู้ราคา<br />จนกว่าจะไปถึงร้าน</h3><p>ไปแล้วถึงรู้ว่า<br />แพงหรือถูก</p></div>
-    <div class="arr"><svg viewBox="0 0 24 24" fill="none" stroke="#14532d" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
-    <div class="box pcard rise" style="--d:500ms"><div class="n">4</div>
-      <svg class="ill" viewBox="0 0 300 190" fill="none"><circle cx="70" cy="40" r="22" fill="#1a1815"/><path d="M70 66v52M70 80l-28 28M70 80l30 22M70 118l-26 56M70 118l34 44" stroke="#1a1815" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/><path d="M170 34c-30 0-46 22-46 44 0 28 46 66 46 66s46-38 46-66c0-22-16-44-46-44z" fill="#14532d"/><circle cx="170" cy="78" r="16" fill="#fff"/><path d="M120 170c20-14 50-8 70-24" stroke="#14532d" stroke-width="6" stroke-linecap="round" stroke-dasharray="2 14"/></svg>
-      <h3>สุดท้ายก็ต้อง<br />เดินไปเอง</h3><p>ถ้าไม่ว่าง<br />ก็ไม่มีใครส่งให้</p></div>
+  <div class="run"><span><b>02</b>สถานการณ์จำลอง</span><span>PrintGo</span></div>
+  <h1 class="h rise">แค่อยากปริ้นรายงาน…<br />ทำไมมัน<span class="a">วุ่นขนาดนี้</span></h1>
+  <p class="lead rise" style="--d:60ms">ตอนห้าทุ่ม มายด์ นักศึกษา ต้องส่งรายงานพรุ่งนี้เช้า</p>
+  <div class="cols4 push">
+    <div class="c rise" style="--d:140ms"><div class="n">01</div><h3>ร้านใกล้ๆ<br />ปิดไปแล้ว</h3><p>ไม่รู้ว่าร้านไหน<br />ยังเปิดอยู่บ้าง</p></div>
+    <div class="c rise" style="--d:220ms"><div class="n">02</div><h3>ส่งไฟล์ไปในแชท<br />โดนถามกลับมาเรื่อยๆ</h3><p>ขาวดำหรือสี?<br />กี่หน้า? กี่ชุด?</p></div>
+    <div class="c rise" style="--d:300ms"><div class="n">03</div><h3>ไม่รู้ราคา<br />จนกว่าจะไปถึงร้าน</h3><p>ไปแล้วถึงรู้ว่า<br />แพงหรือถูก</p></div>
+    <div class="c rise" style="--d:380ms"><div class="n">04</div><h3>สุดท้ายก็ต้อง<br />เดินไปเอง</h3><p>ถ้าไม่ว่าง<br />ก็ไม่มีใครส่งให้</p></div>
   </div>
   <aside class="notes sr">เวลา 0:30-1:15 (45 วินาที)
 ลองนึกถึงมายด์ นักศึกษา ตอนห้าทุ่ม พรุ่งนี้เช้าต้องส่งรายงาน
@@ -356,21 +249,21 @@
 
 <!-- 3 causes -->
 <section class="slide s3 light">
+  <div class="run"><span><b>03</b>ปัญหา</span><span>PrintGo</span></div>
   <h1 class="h rise">สองฝั่งเหนื่อยคนละแบบ<br />แต่<span class="a">ต้นเหตุ</span>มีแค่ 4 อย่าง</h1>
   <div class="grid">
-    <div class="two">
-      <div class="mini rise" style="--d:80ms"><h3>ลูกค้า</h3><ul><li>ต้องเดินไปร้านเอง และตอบคำถามเดิมๆ ในแชท</li><li>ไม่รู้ราคาก่อนไป</li><li>ไม่รู้ว่าร้านไหนใกล้<br />และร้านไหนเปิดอยู่</li></ul></div>
-      <div class="mini rise" style="--d:160ms"><h3>ร้านปริ้น</h3><ul><li>ลูกค้าบอกไม่ครบ ต้องถามซ้ำหลายรอบ</li><li>ไฟล์กระจายอยู่หลายแชท หาไม่เจอ</li><li>ต้องมี LINE OA เอง<br />ถึงจะรับงานได้</li></ul></div>
+    <div class="who rise" style="--d:80ms">
+      <div><h3>ลูกค้า</h3><ul><li>ต้องเดินไปร้านเอง และตอบคำถามเดิมๆ ในแชท</li><li>ไม่รู้ราคาก่อนไป</li><li>ไม่รู้ว่าร้านไหนใกล้<br />และร้านไหนเปิดอยู่</li></ul></div>
+      <div><h3>ร้านปริ้น</h3><ul><li>ลูกค้าบอกไม่ครบ ต้องถามซ้ำหลายรอบ</li><li>ไฟล์กระจายอยู่หลายแชท หาไม่เจอ</li><li>ต้องมี LINE OA เอง<br />ถึงจะรับงานได้</li></ul></div>
     </div>
-    <div class="bigarrow rise" style="--d:240ms"><svg viewBox="0 0 96 120" fill="#14532d"><path d="M6 36h46V8l38 52-38 52V84H6z"/></svg></div>
-    <div class="causes">
-      <div class="cause rise" style="--d:280ms"><b>1</b>สั่งไม่ชัดเจน</div>
-      <div class="cause rise" style="--d:340ms"><b>2</b>ไม่รู้ราคา</div>
-      <div class="cause rise" style="--d:400ms"><b>3</b>ไม่รู้ร้านที่เปิด</div>
-      <div class="cause rise" style="--d:460ms"><b>4</b>ไม่มีคนส่งให้</div>
+    <div class="causes rise" style="--d:160ms">
+      <div class="cause"><b>1</b>สั่งไม่ชัดเจน</div>
+      <div class="cause"><b>2</b>ไม่รู้ราคา</div>
+      <div class="cause"><b>3</b>ไม่รู้ร้านที่เปิด</div>
+      <div class="cause"><b>4</b>ไม่มีคนส่งให้</div>
     </div>
   </div>
-  <div class="band rise" style="--d:520ms"><div class="q">“ลูกค้าบอกรายละเอียดไม่ครบ<br />สุดท้ายต้องมาสั่งซ้ำที่ร้าน”</div><div class="q">“ลูกค้าทักมาถามบ่อยมาก<br />ว่างานเสร็จหรือยัง”</div></div>
+  <div class="quotes push rise" style="--d:260ms"><p>“ลูกค้าบอกรายละเอียดไม่ครบ สุดท้ายต้องมาสั่งซ้ำที่ร้าน”</p><p>“ลูกค้าทักมาถามบ่อยมาก ว่างานเสร็จหรือยัง”</p></div>
   <p class="note src">ที่มา: เราไปคุยกับร้านปริ้นจริงมา</p>
   <aside class="notes sr">เวลา 1:15-2:00 (45 วินาที)
 เราไปคุยกับร้านปริ้นจริงมา เจอว่าลูกค้ากับร้านเหนื่อยคนละแบบ แต่ต้นเหตุจริงๆ มีสี่อย่าง คือ สั่งไม่ชัดเจน ไม่รู้ราคา ไม่รู้ว่าร้านไหนเปิด และไม่มีคนส่งให้
@@ -380,34 +273,19 @@
 
 <!-- 4 one OA -->
 <section class="slide s4 light">
+  <div class="run"><span><b>04</b>ทางออก</span><span>PrintGo</span></div>
   <h1 class="h rise">ร้าน 10 ร้าน ไม่ควรต้องมี <span class="a">LINE OA 10 อัน</span></h1>
   <div class="cols">
-    <div class="panel before rise" style="--d:80ms">
-      <div class="kick">ก่อน</div>
-      <h3>PrintQ</h3><div class="sm">(1 ร้าน = 1 OA)</div>
-      <div class="oas"><div>OA<br />1</div><div>OA<br />2</div><div>OA<br />3</div><div>OA<br />4</div><div>OA<br />5</div><div>OA<br />6</div><div>OA<br />7</div><div>OA<br />8</div><div>OA<br />9</div><div>OA<br />10</div></div>
-      <hr />
-      <div class="cap">10 ร้านก็ต้องดูแล 10 OA<br />ลูกค้าต้องกดเพิ่มเพื่อนทีละร้าน</div>
+    <div class="col before rise" style="--d:100ms">
+      <div class="kick">ก่อน · PrintQ (1 ร้าน = 1 OA)</div>
+      <div class="num">10<span>OA</span></div>
+      <p class="cap">10 ร้านก็ต้องดูแล 10 OA<br />ลูกค้าต้องกดเพิ่มเพื่อนทีละร้าน</p>
     </div>
-    <div class="mid rise" style="--d:160ms"><svg viewBox="0 0 24 24" fill="none" stroke="#14532d" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
-    <div class="panel after rise" style="--d:200ms">
-      <div class="kick">หลัง</div>
-      <h3>PrintGo</h3><div class="sm">(OA เดียว หลายร้าน)</div>
-      <svg class="tree" viewBox="0 0 700 330" fill="none">
-        <circle cx="350" cy="36" r="34" fill="#fff" stroke="#1a1815" stroke-width="4"/><text x="350" y="46" font-family="Prompt" font-size="26" font-weight="700" text-anchor="middle" fill="#1a1815">ลูกค้า</text>
-        <path d="M350 70v36" stroke="#1a1815" stroke-width="4"/>
-        <rect x="190" y="106" width="320" height="86" rx="18" fill="#14532d"/>
-        <text x="350" y="146" font-family="Prompt" font-size="32" font-weight="700" fill="#fff" text-anchor="middle">PrintGo</text>
-        <text x="350" y="178" font-family="Prompt" font-size="28" font-weight="600" fill="#e3efe7" text-anchor="middle">OA เดียว</text>
-        <path d="M350 192v28M70 220h560M70 220v34M210 220v34M350 220v34M490 220v34M630 220v34" stroke="#1a1815" stroke-width="4"/>
-        <rect x="14" y="254" width="112" height="56" rx="14" fill="#e3efe7" stroke="#14532d" stroke-width="3"/><text x="70" y="291" font-family="Prompt" font-size="27" font-weight="700" text-anchor="middle" fill="#1a1815">ร้าน A</text>
-        <rect x="154" y="254" width="112" height="56" rx="14" fill="#e3efe7" stroke="#14532d" stroke-width="3"/><text x="210" y="291" font-family="Prompt" font-size="27" font-weight="700" text-anchor="middle" fill="#1a1815">ร้าน B</text>
-        <rect x="294" y="254" width="112" height="56" rx="14" fill="#e3efe7" stroke="#14532d" stroke-width="3"/><text x="350" y="291" font-family="Prompt" font-size="27" font-weight="700" text-anchor="middle" fill="#1a1815">ร้าน C</text>
-        <rect x="434" y="254" width="112" height="56" rx="14" fill="#e3efe7" stroke="#14532d" stroke-width="3"/><text x="490" y="291" font-family="Prompt" font-size="27" font-weight="700" text-anchor="middle" fill="#1a1815">ร้าน D</text>
-        <rect x="574" y="254" width="112" height="56" rx="14" fill="#e3efe7" stroke="#14532d" stroke-width="3"/><text x="630" y="291" font-family="Prompt" font-size="27" font-weight="700" text-anchor="middle" fill="#1a1815">ร้าน …</text>
-      </svg>
-      <hr style="border-top-color:#d6d2cb" />
-      <div class="cap">เพิ่มร้านใหม่ได้เลย ไม่ต้องสร้าง OA ใหม่<br />ร้านไม่ต้องมี OA เอง ใช้เว็บแดชบอร์ดแทน</div>
+    <div class="col after rise" style="--d:200ms">
+      <div class="kick">หลัง · PrintGo (OA เดียว หลายร้าน)</div>
+      <div class="num">1<span>OA</span></div>
+      <p class="cap">เพิ่มร้านใหม่ได้เลย ไม่ต้องสร้าง OA ใหม่<br />ร้านไม่ต้องมี OA เอง ใช้เว็บแดชบอร์ดแทน</p>
+      <p class="shops">ร้าน A · ร้าน B · ร้าน C · ร้าน D · …</p>
     </div>
   </div>
   <aside class="notes sr">เวลา 2:00-2:40 (40 วินาที)
@@ -418,27 +296,18 @@
 
 <!-- 5 six steps -->
 <section class="slide s5 light">
+  <div class="run"><span><b>05</b>ขั้นตอน</span><span>PrintGo</span></div>
   <h1 class="h rise">ทักใน <span class="a">LINE</span> เดียว ได้งานถึงมือใน <span class="a">6 ขั้นตอน</span></h1>
-  <div class="lanes rise" style="--d:100ms">
-    <div class="lane c" style="top:0"><div class="lbl">ลูกค้า</div><div class="bg"></div></div>
-    <div class="lane p" style="top:200px"><div class="lbl">PrintGo</div><div class="bg"></div></div>
-    <div class="lane s" style="top:400px"><div class="lbl">ร้านปริ้น</div><div class="bg"></div></div>
-    <svg class="links" viewBox="0 0 1700 560" fill="none">
-      <path d="M460 126C460 186 596 190 616 230" stroke="#14532d" stroke-width="5" marker-end="url(#ah)"/>
-      <path d="M700 326C700 392 880 380 900 430" stroke="#14532d" stroke-width="5" marker-end="url(#ah)"/>
-      <path d="M960 432C1000 330 1060 196 1100 130" stroke="#14532d" stroke-width="5" marker-end="url(#ah)"/>
-      <path d="M1180 126C1264 220 1272 330 1244 430" stroke="#14532d" stroke-width="5" marker-end="url(#ah)"/>
-      <path d="M1340 478C1470 470 1504 380 1504 330" stroke="#14532d" stroke-width="5" marker-end="url(#ah)"/>
-    </svg>
-    <div class="st" style="left:300px;top:36px"><i>1</i>ส่งไฟล์</div>
-    <div class="st" style="left:500px;top:236px"><i>2</i>ส่งงานให้ร้าน</div>
-    <div class="st" style="left:780px;top:436px"><i>3</i>ยืนยันราคา</div>
-    <div class="st" style="left:1010px;top:36px"><i>4</i>จ่ายเงิน</div>
-    <div class="st" style="left:1120px;top:436px"><i>5</i>ปริ้นงาน</div>
-    <div class="st" style="left:1330px;top:236px"><i>6</i>ไรเดอร์ / รับเอง</div>
+  <div class="steps rise" style="--d:100ms">
+    <div class="st"><span class="who">ลูกค้า</span><div class="n">1</div><h3>ส่งไฟล์</h3></div>
+    <div class="st"><span class="who">PrintGo</span><div class="n">2</div><h3>ส่งงานให้ร้าน</h3></div>
+    <div class="st"><span class="who">ร้านปริ้น</span><div class="n">3</div><h3>ยืนยันราคา</h3></div>
+    <div class="st"><span class="who">ลูกค้า</span><div class="n">4</div><h3>จ่ายเงิน</h3></div>
+    <div class="st"><span class="who">ร้านปริ้น</span><div class="n">5</div><h3>ปริ้นงาน</h3></div>
+    <div class="st"><span class="who">ไรเดอร์ / ลูกค้า</span><div class="n">6</div><h3>ส่งถึงบ้าน หรือมารับเอง</h3></div>
   </div>
-  <div class="band rise" style="--d:260ms"><div class="t">ทุกขั้นตอนมีแจ้งสถานะใน&nbsp;<b>LINE</b>&nbsp;&nbsp; ไม่ต้องทักไปถามว่า “เสร็จยัง”</div></div>
-  <div class="feats rise" style="--d:340ms">
+  <p class="say rise" style="--d:260ms">ทุกขั้นตอนมีแจ้งสถานะใน <b>LINE</b><br />ไม่ต้องทักไปถามว่า “เสร็จยัง”</p>
+  <div class="feats push rise" style="--d:340ms">
     <div>ร้านปฏิเสธงานได้<br />พร้อมบอกเหตุผล</div>
     <div>ลูกค้าจ่ายก่อนปริ้น<br />ตรวจสลิปก่อนเริ่มงาน</div>
     <div>ร้านเงียบเกิน 15 นาที<br />ออเดอร์หมดอายุ สั่งร้านอื่นได้</div>
@@ -452,14 +321,12 @@
 
 <!-- 6 product -->
 <section class="slide s6 light">
-  <div class="top">
-    <h1 class="h rise">ลูกค้าสั่งใน LINE<br /><span class="a">ร้านจัดการได้ในหน้าเดียว</span></h1>
-    <span class="tagpill rise" style="--d:80ms">ภาพจากระบบจริง · ข้อมูลตัวอย่าง</span>
-  </div>
+  <div class="run"><span><b>06</b>ระบบจริง</span><span>ภาพจากระบบจริง · ข้อมูลตัวอย่าง</span></div>
+  <h1 class="h rise">ลูกค้าสั่งใน LINE<br /><span class="a">ร้านจัดการได้ในหน้าเดียว</span></h1>
   <div class="shots">
-    <figure class="shot rise" style="--d:120ms"><div class="phone"><div class="scr"><img alt="หน้าติดตามออเดอร์ในแอปลูกค้า" src="__IMG_TRACK__" /></div></div><figcaption>ลูกค้าดูสถานะงาน<br />และไรเดอร์ในแชทเดียว</figcaption></figure>
-    <figure class="shot rise" style="--d:200ms"><div class="phone"><div class="scr"><img alt="รายการงานของลูกค้า" src="__IMG_LIST__" /></div></div><figcaption>ดูทุกงานของตัวเอง<br />เห็นสถานะชัดๆ</figcaption></figure>
-    <figure class="shot rise" style="--d:280ms"><div class="desk"><div class="bar"><i></i><i></i><i></i></div><img alt="แดชบอร์ดร้านปริ้น หน้าออเดอร์" src="__IMG_SHOP__" /></div><figcaption>ร้านเห็นไฟล์ ราคา เวลาเสร็จ และแชทกับลูกค้า อยู่ในหน้าเดียว</figcaption></figure>
+    <figure class="shot rise" style="--d:120ms"><div class="phone"><img alt="หน้าติดตามออเดอร์ในแอปลูกค้า" src="__IMG_TRACK__" /></div><figcaption>ลูกค้าดูสถานะงาน<br />และไรเดอร์ในแชทเดียว</figcaption></figure>
+    <figure class="shot rise" style="--d:200ms"><div class="phone"><img alt="รายการงานของลูกค้า" src="__IMG_LIST__" /></div><figcaption>ดูทุกงานของตัวเอง<br />เห็นสถานะชัดๆ</figcaption></figure>
+    <figure class="shot rise" style="--d:280ms"><div class="desk"><img alt="แดชบอร์ดร้านปริ้น หน้าออเดอร์" src="__IMG_SHOP__" /></div><figcaption>ร้านเห็นไฟล์ ราคา เวลาเสร็จ และแชทกับลูกค้า อยู่ในหน้าเดียว</figcaption></figure>
   </div>
   <aside class="notes sr">เวลา 3:30-4:10 (40 วินาที)
 ภาพทั้งหมดนี้ถ่ายมาจากระบบที่ทำงานอยู่จริง แต่ข้อมูลข้างในเป็นตัวอย่าง
@@ -468,20 +335,21 @@
 เดี๋ยวช่วงเดโมจะได้เห็นของจริงกันครับ/ค่ะ</aside>
 </section>
 
-<!-- 8 revenue -->
+<!-- 7 revenue -->
 <section class="slide s8 light">
-  <div class="head"><span class="tagpill rise">ตัวอย่างสมมติ</span><h1 class="h rise" style="--d:60ms">เรามีรายได้จากค่าบริการ <span class="a">ประมาณ 5%</span> ของค่าปริ้น</h1></div>
-  <div class="rows">
-    <div class="rowb rise" style="--d:100ms"><div class="lbl">งานเล็ก</div><div class="track">ค่าปริ้น 22 บาท<div class="fee" style="width:13.6%"></div></div><div class="val">+3 บาท (ขั้นต่ำ)</div></div>
-    <div class="rowb rise" style="--d:180ms"><div class="lbl">งานกลาง</div><div class="track">ค่าปริ้น 120 บาท<div class="fee" style="width:5%"></div></div><div class="val">+6 บาท</div></div>
-    <div class="rowb rise" style="--d:260ms"><div class="lbl">งานใหญ่</div><div class="track">ค่าปริ้น 600 บาท (เข้าเรทลด ร้านกรอกราคาเอง)<div class="fee" style="width:5%"></div></div><div class="val">+30 บาท</div></div>
+  <div class="run"><span><b>07</b>รายได้</span><span>ตัวอย่างสมมติ</span></div>
+  <h1 class="h rise">เรามีรายได้จากค่าบริการ <span class="a">ประมาณ 5%</span> ของค่าปริ้น</h1>
+  <div class="rows rise" style="--d:100ms">
+    <div class="rowt"><div class="l">งานเล็ก</div><div class="d">ค่าปริ้น 22 บาท</div><div class="v">+3 บาท (ขั้นต่ำ)</div></div>
+    <div class="rowt"><div class="l">งานกลาง</div><div class="d">ค่าปริ้น 120 บาท</div><div class="v">+6 บาท</div></div>
+    <div class="rowt"><div class="l">งานใหญ่</div><div class="d">ค่าปริ้น 600 บาท (เข้าเรทลด ร้านกรอกราคาเอง)</div><div class="v">+30 บาท</div></div>
   </div>
-  <div class="box formula rise" style="--d:340ms">ค่าบริการ = <b>3 บาท หรือ 5% ของค่าปริ้น (ปัดขึ้น) เอาอันที่มากกว่า</b></div>
-  <div class="now2 rise" style="--d:420ms">
-    <div class="c on"><small>ตอนนี้</small>ลูกค้าเป็นคนจ่ายค่าบริการ<br />ร้านได้ค่าปริ้นเต็มๆ ไม่โดนหัก</div>
+  <p class="formula rise" style="--d:260ms">ค่าบริการ = <b>3 บาท หรือ 5% ของค่าปริ้น (ปัดขึ้น) เอาอันที่มากกว่า</b></p>
+  <div class="now2 rise" style="--d:340ms">
+    <div class="c"><small>ตอนนี้</small>ลูกค้าเป็นคนจ่ายค่าบริการ<br />ร้านได้ค่าปริ้นเต็มๆ ไม่โดนหัก</div>
     <div class="c later"><small>ต่อไป</small>ค่าสมัครร้าน · โปรโมตร้าน<br />แพ็กเกจสำหรับองค์กร</div>
   </div>
-  <p class="note rise" style="--d:480ms">ตัวเลขทั้งหมดเป็นตัวอย่างสมมติ · ต้นทุนจริงต่อออเดอร์ (ค่าข้อความ LINE ค่าตรวจสลิป ค่าธรรมเนียมรับเงิน) ยังต้องรอเช็กราคาจริง · ค่าบริการคิดจากค่าปริ้นอย่างเดียว ไม่คิดซ้อนบนค่าส่ง</p>
+  <p class="note">ตัวเลขทั้งหมดเป็นตัวอย่างสมมติ · ต้นทุนจริงต่อออเดอร์ (ค่าข้อความ LINE ค่าตรวจสลิป ค่าธรรมเนียมรับเงิน) ยังต้องรอเช็กราคาจริง · ค่าบริการคิดจากค่าปริ้นอย่างเดียว ไม่คิดซ้อนบนค่าส่ง</p>
   <aside class="notes sr">เวลา 4:10-4:50 (40 วินาที)
 เรามีรายได้จากค่าบริการประมาณ 5% ของค่าปริ้น แต่ขั้นต่ำ 3 บาท และปัดเศษขึ้น คิดจากค่าปริ้นอย่างเดียว ไม่คิดซ้อนบนค่าส่ง
 ยกตัวอย่าง งานเล็ก ค่าปริ้น 22 บาท ค่าบริการ 3 บาทตามขั้นต่ำ งานกลาง 120 บาท ค่าบริการ 6 บาท งานใหญ่ 600 บาท ค่าบริการ 30 บาท
@@ -489,25 +357,26 @@
 (ตัวเลขเป็นตัวอย่างสมมติทั้งหมด)</aside>
 </section>
 
-<!-- 9 build -->
+<!-- 8 build -->
 <section class="slide s9 light">
-  <div class="head"><h1 class="h rise">สร้างด้วยของจริง <span class="a">และออกแบบให้ส่งถึงบ้านได้</span></h1></div>
-  <div class="stack">
-    <div class="c rise" style="--d:80ms"><h3>LINE</h3><p>ลูกค้าสั่งใน LINE<br />ได้เลย ไม่ต้องโหลดแอป</p></div>
-    <div class="c rise" style="--d:140ms"><h3>Next.js</h3><p>ทำทั้งหน้าเว็บ<br />และระบบหลังบ้าน</p></div>
-    <div class="c rise" style="--d:200ms"><h3>Supabase</h3><p>เก็บข้อมูลและไฟล์<br />ไฟล์ลบเองอัตโนมัติ</p></div>
-    <div class="c ext rise" style="--d:260ms"><h3>บริการภายนอก</h3><p>ขนส่ง · ตรวจสลิป<br />สลับเจ้าได้</p></div>
+  <div class="run"><span><b>08</b>สร้างอย่างไร</span><span>PrintGo</span></div>
+  <h1 class="h rise">สร้างด้วยของจริง <span class="a">และออกแบบให้ส่งถึงบ้านได้</span></h1>
+  <div class="stack rise" style="--d:80ms">
+    <div class="c"><h3>LINE</h3><p>ลูกค้าสั่งใน LINE ได้เลย<br />ไม่ต้องโหลดแอป</p></div>
+    <div class="c"><h3>Next.js</h3><p>ทำทั้งหน้าเว็บ<br />และระบบหลังบ้าน</p></div>
+    <div class="c"><h3>Supabase</h3><p>เก็บข้อมูลและไฟล์<br />ไฟล์ลบเองอัตโนมัติ</p></div>
+    <div class="c"><h3>บริการภายนอก</h3><p>ขนส่ง · ตรวจสลิป<br />สลับเจ้าได้</p></div>
   </div>
-  <div class="dl rise" style="--d:300ms">
-    <span class="tagpill">การส่งถึงบ้าน: ระบบเรียกไรเดอร์ให้</span>
-    <div class="dflow"><div class="b">ร้านกด<br />“ปริ้นเสร็จแล้ว”</div><div class="arr"><svg viewBox="0 0 24 24" fill="none" stroke="#14532d" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div><div class="b k">PrintGo เรียกไรเดอร์<br />ผ่านบริษัทขนส่ง</div><div class="arr"><svg viewBox="0 0 24 24" fill="none" stroke="#14532d" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div><div class="b">สถานะวิ่งกลับมา<br />แจ้งใน LINE</div></div>
+  <div class="dl rise" style="--d:200ms">
+    <div class="lbl">การส่งถึงบ้าน: ระบบเรียกไรเดอร์ให้</div>
+    <div class="dflow"><div>ร้านกด “ปริ้นเสร็จแล้ว”</div><span class="ar">→</span><div>PrintGo เรียกไรเดอร์ผ่านบริษัทขนส่ง</div><span class="ar">→</span><div>สถานะวิ่งกลับมาแจ้งใน LINE</div></div>
   </div>
-  <div class="three rise" style="--d:380ms">
+  <div class="three rise" style="--d:300ms">
     <div>ออกแบบให้<b>สลับเจ้าขนส่งได้</b><br />ตอนนี้มีแบบเรียกเอง (manual) กับ Grab</div>
-    <div>บอกตรงๆ ว่างานเล็กค่าส่งอาจแพงกว่าค่าปริ้น<br />เลย<b>ตั้งยอดขั้นต่ำสำหรับสั่งส่ง</b></div>
-    <div>ในเดโม ไรเดอร์ที่เห็น<br /><b>เป็นภาพจำลอง</b> ยังไม่ได้ต่อกับ Grab จริง</div>
+    <div>บอกตรงๆ ว่างานเล็กค่าส่งอาจแพงกว่าค่าปริ้น เลย<b>ตั้งยอดขั้นต่ำสำหรับสั่งส่ง</b></div>
+    <div>ในเดโม ไรเดอร์ที่เห็น<b>เป็นภาพจำลอง</b> ยังไม่ได้ต่อกับ Grab จริง</div>
   </div>
-  <div class="chips rise" style="--d:440ms"><span>เลือกหน้าและดูพรีวิวจริง</span><span>จ่ายผ่าน PromptPay QR</span><span>แชทลูกค้ากับร้าน</span><span>แจ้งเตือนร้านบนเว็บ</span><span>แอดมินโอนเงินให้ร้าน</span><span>เทสต์อัตโนมัติ 1,200+ ข้อ</span></div>
+  <div class="chips rise" style="--d:380ms"><span>เลือกหน้าและดูพรีวิวจริง</span><span>จ่ายผ่าน PromptPay QR</span><span>แชทลูกค้ากับร้าน</span><span>แจ้งเตือนร้านบนเว็บ</span><span>แอดมินโอนเงินให้ร้าน</span><span>เทสต์อัตโนมัติ 1,200+ ข้อ</span></div>
   <aside class="notes sr">เวลา 4:50-5:50 (60 วินาที)
 เราสร้างด้วยเครื่องมือจริง ใช้ LINE กับ LIFF ลูกค้าเลยไม่ต้องโหลดแอป ใช้ Next.js ทำเว็บกับหลังบ้านบน Vercel ใช้ Supabase เก็บข้อมูลกับไฟล์ ไฟล์ลบเองอัตโนมัติ ส่วนขนส่งกับตรวจสลิปใช้บริการภายนอก ซึ่งออกแบบให้สลับเจ้าได้
 เรื่องส่งถึงบ้าน พอร้านกดปริ้นเสร็จ PrintGo ก็เรียกไรเดอร์ผ่านบริษัทขนส่ง แล้วสถานะวิ่งกลับมาแจ้งใน LINE
@@ -515,11 +384,12 @@
 ระบบมีเทสต์อัตโนมัติเกิน 1,200 ข้อ และรันทุกครั้งก่อนรวมโค้ด</aside>
 </section>
 
-<!-- 10 risks -->
+<!-- 9 risks -->
 <section class="slide s10 light">
+  <div class="run"><span><b>09</b>ความเสี่ยงและแผน</span><span>PrintGo</span></div>
   <h1 class="h rise">เรารู้ความเสี่ยง และมีแผนพิสูจน์กับ<span class="a">ร้านจริง</span></h1>
   <div class="rk">
-    <div class="tbl rise" style="--d:100ms">
+    <div class="tbl rise" style="--d:80ms">
       <div class="th"><div>ความเสี่ยง</div><div>เรารับมือยังไง</div></div>
       <div class="tr"><div>รับเงินแล้วโอนให้ร้าน</div><div>ตอนนี้เป็นต้นแบบ แอดมินโอนให้ร้านเอง<br />ถ้าใช้จริงจะผ่านผู้รับชำระเงินที่ได้รับอนุญาต</div></div>
       <div class="tr"><div>ค่าส่งแพงกว่าค่าปริ้น</div><div>ตั้งยอดขั้นต่ำสำหรับสั่งส่ง<br />และโชว์ค่าส่งให้เห็นก่อนตัดสินใจ</div></div>
@@ -527,14 +397,14 @@
       <div class="tr"><div>ไฟล์มีข้อมูลส่วนตัว</div><div>เก็บแบบปิด ร้านเปิดผ่านลิงก์ชั่วคราว ลบเองใน 7 วัน<br />ร้านไม่เห็นชื่อและเบอร์คนรับ</div></div>
       <div class="tr"><div>ลูกค้ายกเลิกหลังจ่ายแล้ว</div><div>ลูกค้ายกเลิกเองไม่ได้<br />ต้องให้แอดมินยกเลิกและคืนเงินให้</div></div>
     </div>
-    <div class="road rise" style="--d:200ms">
+    <div class="road rise" style="--d:160ms">
       <h3>แผนต่อจากนี้</h3>
       <div class="stp"><b>ตอนนี้: ต้นแบบ</b>ใช้ได้ครบทุกขั้นตอน มีร้านตัวอย่าง 3 ร้าน ไรเดอร์ยังเป็นภาพจำลอง</div>
       <div class="stp"><b>ถัดไป: ทดลองจริง</b>เริ่มจากนักศึกษากับร้านรอบมหาวิทยาลัย 3–5 ร้าน ต่อ Grab จริง และจัดการเรื่องเงินให้ถูกต้องตามกฎ</div>
       <div class="stp muted"><b>หลังจากนั้น: ขยาย</b>เพิ่มพื้นที่ เพิ่มเจ้าขนส่ง และรองรับไฟล์ Word กับ PowerPoint</div>
     </div>
   </div>
-  <div class="kpi rise" style="--d:300ms"><div class="k">สิ่งที่<br />จะวัดผล</div><span class="d"></span><span>จำนวนร้านที่ใช้จริง</span><span class="d"></span><span>ออเดอร์สำเร็จต่อสัปดาห์</span><span class="d"></span><span>งานที่ไม่ต้องถามซ้ำ (%)</span><span class="d"></span><span>ส่งสำเร็จกี่ % (ยังไม่ตั้งเป้า)</span></div>
+  <div class="kpi rise" style="--d:260ms"><div class="k">สิ่งที่จะวัดผล</div><span class="i">จำนวนร้านที่ใช้จริง</span><span class="i">ออเดอร์สำเร็จต่อสัปดาห์</span><span class="i">งานที่ไม่ต้องถามซ้ำ (%)</span><span class="i">ส่งสำเร็จกี่ % (ยังไม่ตั้งเป้า)</span></div>
   <p class="note">ที่มา: ธนาคารแห่งประเทศไทย เรื่องใบอนุญาตธุรกิจ e-Payment (bot.or.th) · ก่อนใช้จริงต้องให้ผู้เชี่ยวชาญตรวจก่อน</p>
   <aside class="notes sr">เวลา 5:50-7:00 (70 วินาที)
 เรารู้ว่ามีความเสี่ยงอยู่ เรื่องแรกคือการรับเงินแล้วโอนให้ร้าน ต้องระวังเรื่องใบอนุญาต ตอนนี้เป็นต้นแบบ แอดมินโอนให้ร้านเอง ถ้าใช้จริงจะผ่านผู้รับชำระเงินที่ได้รับอนุญาต
@@ -544,7 +414,7 @@
 ปิดด้วย "เอาล่ะ ขอเชิญดูของจริงเลยครับ/ค่ะ" แล้วกดไปสไลด์เดโม</aside>
 </section>
 
-<!-- 11 demo -->
+<!-- 10 demo -->
 <section class="slide s11 dark">
   <div class="left rise">
     <div class="big">เดโมสด</div>
@@ -552,11 +422,11 @@
     <p class="sub">ลูกค้าสั่งใน LINE<br />ร้านเห็นออเดอร์ทันที</p>
   </div>
   <div class="beats">
-    <div class="beat rise" style="--d:100ms"><div class="n">1</div><div><h3>ลูกค้าสั่งปริ้น</h3><p>เลือกไฟล์ เลือกหน้า แล้วเลือกร้าน</p></div><span class="chip">ลูกค้า · LINE</span></div>
-    <div class="beat rise" style="--d:180ms"><div class="n">2</div><div><h3>ร้านได้ออเดอร์</h3><p>มีเสียงเตือน และนับถอยหลัง 15 นาที</p></div><span class="chip">ร้าน · แดชบอร์ด</span></div>
-    <div class="beat rise" style="--d:260ms"><div class="n">3</div><div><h3>ร้านบอกราคา ลูกค้าจ่าย</h3><p>จ่ายผ่าน PromptPay แล้วส่งสลิป</p></div><span class="chip">ลูกค้า + ร้าน</span></div>
-    <div class="beat rise" style="--d:340ms"><div class="n">4</div><div><h3>ร้านปริ้น และคุยกับลูกค้า</h3><p>เริ่มปริ้น ปริ้นเสร็จ แล้วแชทคุยกัน</p></div><span class="chip">ร้าน · แดชบอร์ด</span></div>
-    <div class="beat rise" style="--d:420ms"><div class="n">5</div><div><h3>ไรเดอร์ส่งถึงบ้าน</h3><p>ดูสถานะ แล้วกด “ได้รับของแล้ว”</p></div><span class="chip">ลูกค้า · LINE</span></div>
+    <div class="beat rise" style="--d:100ms"><div class="n">01</div><div><h3>ลูกค้าสั่งปริ้น</h3><p>เลือกไฟล์ เลือกหน้า แล้วเลือกร้าน</p></div><span class="w">ลูกค้า · LINE</span></div>
+    <div class="beat rise" style="--d:180ms"><div class="n">02</div><div><h3>ร้านได้ออเดอร์</h3><p>มีเสียงเตือน และนับถอยหลัง 15 นาที</p></div><span class="w">ร้าน · แดชบอร์ด</span></div>
+    <div class="beat rise" style="--d:260ms"><div class="n">03</div><div><h3>ร้านบอกราคา ลูกค้าจ่าย</h3><p>จ่ายผ่าน PromptPay แล้วส่งสลิป</p></div><span class="w">ลูกค้า + ร้าน</span></div>
+    <div class="beat rise" style="--d:340ms"><div class="n">04</div><div><h3>ร้านปริ้น และคุยกับลูกค้า</h3><p>เริ่มปริ้น ปริ้นเสร็จ แล้วแชทคุยกัน</p></div><span class="w">ร้าน · แดชบอร์ด</span></div>
+    <div class="beat rise" style="--d:420ms"><div class="n">05</div><div><h3>ไรเดอร์ส่งถึงบ้าน</h3><p>ดูสถานะ แล้วกด “ได้รับของแล้ว”</p></div><span class="w">ลูกค้า · LINE</span></div>
   </div>
   <aside class="notes sr">เวลา 7:00-12:00 (เดโม 5 นาที) ใช้ข้อมูลทดสอบ ไม่ใช่ออเดอร์จริง
 7:00-8:00 ลูกค้า: เปิดแชท LINE กดเมนู "สั่งปริ้น" เลือกไฟล์ (ไฟล์ตัวอย่างหลายหน้า) เลือกบางหน้า กดแว่นขยายดูตัวอย่างหน้า เลือกร้าน เลือก "ส่งถึงที่" กดสั่ง
@@ -570,7 +440,7 @@
 ข้อควรระวัง: ถ้าเน็ตหรือ LINE มีปัญหา ให้เปิดวิดีโอสำรองทันที อย่ารอ</aside>
 </section>
 
-<!-- 12 close -->
+<!-- 11 close -->
 <section class="slide s12 dark">
   <div class="top rise"><b>PrintGo</b><span>ซี · พลุ · ยูริ · อาร์ม</span></div>
   <p class="tag rise" style="--d:80ms">Your file goes in.<em>Your print comes home.</em></p>
@@ -582,7 +452,6 @@
 </section>
 
 </div>
-
 <nav id="dots" aria-label="เลือกสไลด์"></nav>
 <div id="notes" role="region" aria-label="โน้ตผู้พรีเซนต์">
   <div class="bar"><span id="pos">1 / 12</span><span class="clock" id="clock">12:00</span><span class="when" id="when"></span><span class="hint">S ปิดโน้ต · T เริ่ม/หยุดจับเวลา · R รีเซ็ต · F เต็มจอ</span></div>
@@ -635,3 +504,4 @@
 </script>
 </body>
 </html>
+
